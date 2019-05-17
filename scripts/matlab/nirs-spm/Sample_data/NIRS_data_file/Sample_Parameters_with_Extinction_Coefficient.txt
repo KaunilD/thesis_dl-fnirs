@@ -1,0 +1,7 @@
+Total_number_of_Ch. 24
+Sampling_freq.[Hz] 9.75
+Distance[cm] 3.3 3.3304 3.3609 3.3913 3.4217 3.4522 3.4826 3.513 3.5435 3.5739 3.6043 3.6348 3.6652 3.6957 3.7261 3.7565 3.787 3.8174 3.8478 3.8783 3.9087 3.9391 3.9696 4
+Wave_length[nm] 856 781
+DPF 4
+correction yes
+Extinction_coefficient 1.1885 0.7923 0.7422 1.0803
