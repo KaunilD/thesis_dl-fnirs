@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[2]:
-
-
 import os
 import sys
 import shutil
@@ -15,10 +9,6 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 from binary_wl_dataloader import *
-
-
-# In[10]:
-
 
 
 class BinaryWMLoader(torch_data.Dataset):
@@ -54,9 +44,9 @@ class BinaryWMLoader(torch_data.Dataset):
 # In[11]:
 
 
-class LeNet(nn.Module):
+class ReducedLeNet(nn.Module):
     def __init__(self, num_classes=1, input_channels=1):
-        super(LeNet, self).__init__()
+        super(ReducedLeNet, self).__init__()
         self.conv1 = nn.Conv2d(input_channels, stride=1, kernel_size=1, out_channels=2)
         self.fc1   = nn.Linear(44, num_classes)
         self.softmax = nn.Sigmoid()
@@ -135,7 +125,7 @@ def test(model, dataset_loader, device, criterion):
 if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LeNet()
+    model = ReducedLeNet()
     learning_rate = 1e-3
 
     criterion = nn.CrossEntropyLoss()
