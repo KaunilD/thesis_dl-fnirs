@@ -1,6 +1,6 @@
 ### Notes
 
-1. [binary][https://github.com/KaunilD/thesis_dl-fnirs/tree/master/data/binary]
+1. [binary](https://github.com/KaunilD/thesis_dl-fnirs/tree/master/data/binary)
 
    1. contains train/test/val data with binary labels - 0, 1 segregated into corresponding folders.
    2. 0 - high workload, 1 - no workload
