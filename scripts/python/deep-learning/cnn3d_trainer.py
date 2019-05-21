@@ -151,14 +151,14 @@ if __name__ == '__main__':
 
     train_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='train', time_steps = 40
+        split='train', time_steps = 60
     )
     data_shape = train_dataset.__getitem__(0)[0].shape
     train_loader = torch_data.DataLoader( train_dataset, batch_size=1, shuffle=True, num_workers=1)
 
     val_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='val', time_steps = 40
+        split='val', time_steps = 60
     )
     val_loader = torch_data.DataLoader( val_dataset, batch_size=1, shuffle=True, num_workers=1)
 
