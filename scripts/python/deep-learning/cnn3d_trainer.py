@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 import glob
+from torchsummary import summary
 
 
 class MultilabelWMLoader(torch_data.Dataset):
@@ -129,6 +130,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = CNN3D()
+
     learning_rate = 1e-3
 
     criterion = nn.MultiLabelSoftMarginLoss()
@@ -146,7 +148,7 @@ if __name__ == '__main__':
     best_accuracy = 0.0
     best_model = -1
 
-    MODEL_PATH_PREFIX = 'model-lenet-epoch'
+    MODEL_PATH_PREFIX = 'model-cnn3d-epoch'
     MODEL_PATH_EXT = 'pth'
 
     train_loader = torch_data.DataLoader(
@@ -158,7 +160,7 @@ if __name__ == '__main__':
 
     val_loader = torch_data.DataLoader(
             MultilabelWMLoader(
-                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='train'
+                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='val'
             ),
             batch_size=1, shuffle=True, num_workers=1
     )
@@ -167,6 +169,8 @@ if __name__ == '__main__':
     best_score = 0
     best_epoch = 0
 
+    print(summary(model, (20, 5, 22, 1)))
+    sys.exit(0)
     print("Epoch\tTrain Loss\tValidation Loss\tValidation Acc")
     while curr_epoch <= epochs:
         running_loss = train(
