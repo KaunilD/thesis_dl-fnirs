@@ -8,10 +8,10 @@ import torch.utils.data as torch_data
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-from binary_wl_dataloader import *
+import glob
 
 
-class BinaryWMLoader(torch_data.Dataset):
+class MultilabelWMLoader(torch_data.Dataset):
     def __init__(self, data_dir, split, num_classes = 1 ):
         self.data_dir = data_dir
         self.split = split
@@ -24,46 +24,45 @@ class BinaryWMLoader(torch_data.Dataset):
     def read_lists(self):
         data_bins = os.path.join(self.data_dir, self.split)
         assert os.path.exists(data_bins)
-        folders = [i for i in next(os.walk(data_bins))[1]]
-        for folder in folders:
-            for each_file in glob.glob(os.path.join(data_bins , folder) + '/npy/*.npy'):
-                self.image_list.append(each_file)
-                self.label_list.append(int(folder))
+        for each_file in glob.glob(data_bins + '\\' + '*.npy'):
+            data = np.load(each_file)
+            # .reshape((100, 5, 22, 1))
+            self.image_list.append(data[0].reshape((20, 5, 22, 1)))
+            self.label_list.append(data[1])
 
     def __getitem__(self, index):
-        im = np.load(self.image_list[index])
-        data = [np.asarray([im])]
-        data.append(self.label_list[index])
-        return tuple(data)
-
+        return tuple((self.image_list[index], self.label_list[index]))
 
     def __len__(self):
         return len(self.image_list)
 
 
-# In[11]:
 
+class CNN3D(nn.Module):
+    def __init__(self, num_classes=12, in_planes=20):
+        super(CNN3D, self).__init__()
 
-class ReducedLeNet(nn.Module):
-    def __init__(self, num_classes=1, input_channels=1):
-        super(ReducedLeNet, self).__init__()
-        self.conv1 = nn.Conv2d(input_channels, stride=1, kernel_size=1, out_channels=2)
-        self.fc1   = nn.Linear(44, num_classes)
+        self.conv1 = nn.Conv3d(in_planes, 5, kernel_size=(1, 1, 1))
+        self.conv2 = nn.Conv3d(5, 2, kernel_size=(1, 1, 1))
+        self.conv3 = nn.Conv3d(2, 1, kernel_size=(1, 1, 1))
+        self.fc1   = nn.Linear(5, num_classes)
         self.softmax = nn.Sigmoid()
 
 
     def forward(self, x):
+        out = self.conv1(x)
+        out = F.max_pool3d(out, 2)
 
-        out = self.softmax(self.conv1(x))
-        out = F.max_pool2d(out, 2)
+        out = self.conv2(out)
+        out = F.max_pool3d(out, 2)
+
+        out = self.conv3(out)
         out = out.view(out.size(0), -1)
-        out = self.softmax(self.fc1(out))
+
+        out = self.fc1(out)
         out = self.softmax(out)
 
         return out
-
-
-# In[12]:
 
 
 def train(model, dataset_loader, epoch, device, optimizer, criterion):
@@ -73,11 +72,13 @@ def train(model, dataset_loader, epoch, device, optimizer, criterion):
     for i , (data, target) in enumerate(dataset_loader):
         inputs, labels = data, target
         inputs = inputs.float()
+        labels = labels.float()
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
 
         outputs = model(inputs)
-        loss = F.nll_loss(outputs, labels)
+
+        loss = criterion(outputs, labels)
 
         loss.backward()
 
@@ -107,13 +108,15 @@ def test(model, dataset_loader, device, criterion):
 
             images, labels = data, target
             images = images.float()
+            labels = labels.float()
             images, labels = images.to(device), labels.to(device)
 
             outputs = model(images)
-            valid_loss += F.nll_loss(outputs, labels).item()
+            valid_loss += criterion(outputs, labels).item()
 
-            pred = outputs.max(1, keepdim=True)[1]
-            correct += pred.eq(labels.view_as(pred)).sum().item()
+            pred = outputs.ge(0.5)
+
+            correct += 1 if pred.eq(labels.byte()).sum().item() == 12 else 0
 
     accuracy = 100 * correct / len(dataset_loader.dataset)
     return valid_loss, accuracy
@@ -125,17 +128,17 @@ def test(model, dataset_loader, device, criterion):
 if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ReducedLeNet()
+    model = CNN3D()
     learning_rate = 1e-3
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MultiLabelSoftMarginLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
 
     epochs = 30
     curr_epoch = 0
 
-    model.to('cuda')
-    criterion.to('cuda')
+    model.to(device)
+    criterion.to(device)
 
     loss_history = []
     acc_history = []
@@ -147,17 +150,17 @@ if __name__ == '__main__':
     MODEL_PATH_EXT = 'pth'
 
     train_loader = torch_data.DataLoader(
-            BinaryWMLoader(
-                data_dir='../data/binary_wl/',split='train'
+            MultilabelWMLoader(
+                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='train'
             ),
             batch_size=1, shuffle=True, num_workers=1
     )
 
     val_loader = torch_data.DataLoader(
-            BinaryWMLoader(
-                data_dir='../data/binary_wl/', split='train'
+            MultilabelWMLoader(
+                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='train'
             ),
-        batch_size=1, shuffle=False, num_workers=1
+            batch_size=1, shuffle=True, num_workers=1
     )
 
     is_best = True
