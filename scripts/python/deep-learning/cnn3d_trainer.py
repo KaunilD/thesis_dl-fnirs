@@ -13,9 +13,10 @@ from torchsummary import summary
 
 
 class MultilabelWMLoader(torch_data.Dataset):
-    def __init__(self, data_dir, split, num_classes = 1 ):
+    def __init__(self, data_dir, split, num_classes = 1, time_steps = 100 ):
         self.data_dir = data_dir
         self.split = split
+        self.time_steps = time_steps
 
         self.num_classes = num_classes
         self.image_list, self.label_list = [], []
@@ -28,7 +29,7 @@ class MultilabelWMLoader(torch_data.Dataset):
         for each_file in glob.glob(data_bins + '\\' + '*.npy'):
             data = np.load(each_file)
             # .reshape((100, 5, 22, 1))
-            self.image_list.append(data[0].reshape((20, 5, 22, 1)))
+            self.image_list.append(data[0].reshape((self.time_steps, 5, 22, 1)))
             self.label_list.append(data[1])
 
     def __getitem__(self, index):
@@ -129,17 +130,14 @@ def test(model, dataset_loader, device, criterion):
 if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = CNN3D()
 
     learning_rate = 1e-3
 
     criterion = nn.MultiLabelSoftMarginLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
 
     epochs = 30
     curr_epoch = 0
 
-    model.to(device)
     criterion.to(device)
 
     loss_history = []
@@ -151,26 +149,29 @@ if __name__ == '__main__':
     MODEL_PATH_PREFIX = 'model-cnn3d-epoch'
     MODEL_PATH_EXT = 'pth'
 
-    train_loader = torch_data.DataLoader(
-            MultilabelWMLoader(
-                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='train'
-            ),
-            batch_size=1, shuffle=True, num_workers=1
+    train_dataset = MultilabelWMLoader(
+        data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
+        split='train', time_steps = 40
     )
+    data_shape = train_dataset.__getitem__(0)[0].shape
+    train_loader = torch_data.DataLoader( train_dataset, batch_size=1, shuffle=True, num_workers=1)
 
-    val_loader = torch_data.DataLoader(
-            MultilabelWMLoader(
-                data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',split='val'
-            ),
-            batch_size=1, shuffle=True, num_workers=1
+    val_dataset = MultilabelWMLoader(
+        data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
+        split='val', time_steps = 40
     )
+    val_loader = torch_data.DataLoader( val_dataset, batch_size=1, shuffle=True, num_workers=1)
+
+    model = CNN3D(in_planes = data_shape[0])
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
+    model.to(device)
 
     is_best = True
     best_score = 0
     best_epoch = 0
 
-    print(summary(model, (20, 5, 22, 1)))
-    sys.exit(0)
+    print(summary(model, data_shape))
+
     print("Epoch\tTrain Loss\tValidation Loss\tValidation Acc")
     while curr_epoch <= epochs:
         running_loss = train(
