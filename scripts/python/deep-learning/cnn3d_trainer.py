@@ -117,7 +117,7 @@ def test(model, dataset_loader, device, criterion):
             valid_loss += criterion(outputs, labels).item()
 
             pred = outputs.ge(0.5)
-
+            # TODO: validation accuracy per label.
             correct += 1 if pred.eq(labels.byte()).sum().item() == 12 else 0
 
     accuracy = 100 * correct / len(dataset_loader.dataset)
@@ -151,14 +151,14 @@ if __name__ == '__main__':
 
     train_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='train', time_steps = 80
+        split='train', time_steps = 100
     )
     data_shape = train_dataset.__getitem__(0)[0].shape
     train_loader = torch_data.DataLoader( train_dataset, batch_size=1, shuffle=True, num_workers=1)
 
     val_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='val', time_steps = 80
+        split='val', time_steps = 100
     )
     val_loader = torch_data.DataLoader( val_dataset, batch_size=1, shuffle=True, num_workers=1)
 
