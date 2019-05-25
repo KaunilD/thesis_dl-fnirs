@@ -10,7 +10,7 @@ import torch.nn.init as init
 import torch.nn.functional as F
 import glob
 from torchsummary import summary
-
+from sklearn.metrics import confusion_matrix
 
 class MultilabelWMLoader(torch_data.Dataset):
     def __init__(self, data_dir, split, num_classes = 1, time_steps = 100 ):
@@ -41,25 +41,19 @@ class MultilabelWMLoader(torch_data.Dataset):
 
 
 class CNN3D(nn.Module):
-    def __init__(self, num_classes=12, in_planes=20):
+    def __init__(self, num_classes=9, in_planes=100):
         super(CNN3D, self).__init__()
 
-        self.conv1 = nn.Conv3d(in_planes, 5, kernel_size=(1, 1, 1))
-        self.conv2 = nn.Conv3d(5, 2, kernel_size=(1, 1, 1))
-        self.conv3 = nn.Conv3d(2, 1, kernel_size=(1, 1, 1))
-        self.fc1   = nn.Linear(5, num_classes)
+        self.conv1 = nn.Conv3d(in_planes, 1, kernel_size=(1, 1, 1))
+        self.fc1   = nn.Linear(22, num_classes)
         self.softmax = nn.Sigmoid()
 
 
     def forward(self, x):
+
         out = self.conv1(x)
         out = F.max_pool3d(out, 2)
-
-        out = self.conv2(out)
-        out = F.max_pool3d(out, 2)
-
-        out = self.conv3(out)
-        out = out.view(out.size(0), -1)
+        out = out.view(x.size(0), -1)
 
         out = self.fc1(out)
         out = self.softmax(out)
@@ -87,28 +81,24 @@ def train(model, dataset_loader, epoch, device, optimizer, criterion):
         optimizer.step()
 
         running_loss += loss.item()
-        """
-        print('Train: [Epoch: {}/{}, Batch: {} ({:.0f}%)]'
-              .format(
-                  epoch,
-                  NUM_EPOCHS,
-                  i + 1,
-                  i*100/len(train_loader)
-              ), end='\r')
-        """
+
     return running_loss
+
 
 
 def test(model, dataset_loader, device, criterion):
     model.eval()
-    correct = 0
+
+    hamming_acc = 0
+
     total = 0
+
     valid_loss = 0
 
     with torch.no_grad():
         for i, (data, target) in enumerate(dataset_loader):
-
             images, labels = data, target
+
             images = images.float()
             labels = labels.float()
             images, labels = images.to(device), labels.to(device)
@@ -117,12 +107,24 @@ def test(model, dataset_loader, device, criterion):
             valid_loss += criterion(outputs, labels).item()
 
             pred = outputs.ge(0.5)
+
             # TODO: validation accuracy per label.
-            correct += 1 if pred.eq(labels.byte()).sum().item() == 12 else 0
+            # correct += 1 if pred.eq(labels.byte()).sum().item() == 9 else 0
+            hamming_acc+=hamming_score(labels.cpu().numpy()[0], pred.cpu().numpy()[0])
 
-    accuracy = 100 * correct / len(dataset_loader.dataset)
-    return valid_loss, accuracy
+    hamming_acc /= len(dataset_loader.dataset)
+    return valid_loss, hamming_acc
 
+
+def hamming_score(true, pred):
+    """
+    params:
+        label, pred: N np.ndarray
+    returns:
+        hamming_score: float
+    """
+    assert(true.shape == pred.shape)
+    return sum((true!=pred))/true.shape[0]
 
 # In[13]:
 
@@ -152,25 +154,38 @@ if __name__ == '__main__':
     train_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
         split='train', time_steps = 100
-    )
+        )
+
     data_shape = train_dataset.__getitem__(0)[0].shape
-    train_loader = torch_data.DataLoader( train_dataset, batch_size=1, shuffle=True, num_workers=1)
+
+    train_loader = torch_data.DataLoader(
+        train_dataset,
+        batch_size=1, shuffle=True, num_workers=1
+        )
 
     val_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
         split='val', time_steps = 100
-    )
-    val_loader = torch_data.DataLoader( val_dataset, batch_size=1, shuffle=True, num_workers=1)
+        )
+    val_loader = torch_data.DataLoader(
+        val_dataset,
+        batch_size=1, shuffle=True, num_workers=1
+        )
 
     model = CNN3D(in_planes = data_shape[0])
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, amsgrad=False)
+
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=learning_rate, amsgrad=False
+        )
     model.to(device)
 
     is_best = True
     best_score = 0
     best_epoch = 0
 
+    print("************************ MODEL SUMMARY *************************\n")
     print(summary(model, data_shape))
+    print("****************************************************************\n")
 
     print("Epoch\tTrain Loss\tValidation Loss\tValidation Acc")
     while curr_epoch <= epochs:
@@ -187,7 +202,9 @@ if __name__ == '__main__':
             running_loss, valid_loss
         ))
 
-        acc_history.append(accuracy)
+        acc_history.append((
+            accuracy
+        ))
         # write model to disk.
 
         state = {

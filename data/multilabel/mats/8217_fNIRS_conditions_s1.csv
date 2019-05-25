@@ -1,0 +1,4 @@
+,Unnamed: 0,Task1,Task2,Task3,Task4,Task5,Task6,Task7,Task8,Task9,Task10,Task11,Task12,Task13,Task14,Task15,Task16,Task17,Task18,Task19,Task20,Task21,Task22,Task23,Task24
+0,onset,825,1179,1906,2274,3244,3600,4628,4973,5774,6083,9207,9515,10643,10986,11929,12327,15425,15748,16576,16930,17674,17983,18947,19317
+1,duration,250,650,250,850,250,900,250,700,250,3000,250,1000,250,850,250,3000,250,700,250,650,250,900,250,1000
+2,stim,cr,rt,cr,gng,cr,nb,cr,es,cr,ewm,cr,anb,cr,gng,cr,ewm,cr,es,cr,rt,cr,nb,cr,anb
