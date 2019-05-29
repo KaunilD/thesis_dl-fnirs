@@ -4,10 +4,10 @@
 | hyp-params    | value                    |
 | :------------ | ------------------------ |
 | epochs        | 30                       |
-| loss          | MultiLabelSoftMarginLoss |
+| loss          | MSE |
 | optimizer     | Adam                     |
 | learning rate | 0.001                    |
-| accuracy      | hamming_score            |
+| accuracy      | MSE            |
 
 ##### Model: 3D CNN
 
@@ -37,8 +37,8 @@ Estimated Total Size (MB): 0.04
 | timesteps          | 100                                                          |
 | normalization      | none                                                         |
 | source experiments | only session 1 from [mindfulness/benchmark_tasks/fNIRS_Data](https://github.com/lmhirshf/mindfulness/tree/master/benchmark_tasks/data/fNIRS_Data) |
-| label type         | multilabel; default3                                         |
-| label config       | [ wm_o, wm_l, wm_h, v_o, v_l, v_h, a_o, a_l, a_h, ewm_o, ewm_l, ewm_h ] |
+| label type         | regression; default3                                         |
+| label config       | [ wm, a, v ] => [off = 0, low = 1, high = 2]|
 
 ##### Training
 
@@ -79,4 +79,4 @@ Epoch   Train Loss      Validation Loss Validation Acc
 
 ##### Observations
 
-1. hamming score giving low values for sparse labels. try euclidean distance instead.
+1. euclidean distance metric seems to work. try with more data an higher timesteps.

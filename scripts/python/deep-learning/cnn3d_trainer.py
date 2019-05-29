@@ -29,11 +29,14 @@ class MultilabelWMLoader(torch_data.Dataset):
         for each_file in glob.glob(data_bins + '\\' + '*.npy'):
             data = np.load(each_file)
             # .reshape((100, 5, 22, 1))
-            self.image_list.append(data[0].reshape((self.time_steps, 5, 22, 1)))
+            self.image_list.append(
+                data[0].reshape((1, self.time_steps, 5, 22))
+            )
             self.label_list.append(data[1])
 
     def __getitem__(self, index):
-        return tuple((self.image_list[index], self.label_list[index]))
+
+        return (self.image_list[index], self.label_list[index])
 
     def __len__(self):
         return len(self.image_list)
@@ -45,8 +48,10 @@ class CNN3D(nn.Module):
         super(CNN3D, self).__init__()
 
         self.conv1 = nn.Conv3d(in_planes, 1, kernel_size=(1, 1, 1))
-        self.fc1   = nn.Linear(22, num_classes)
+
         self.softmax = nn.Sigmoid()
+
+        self.fc1   = nn.Linear(1100, 3)
 
 
     def forward(self, x):
@@ -65,38 +70,34 @@ def train(model, dataset_loader, epoch, device, optimizer, criterion):
     model.train()
     running_loss = 0.0
 
-    for i , (data, target) in enumerate(dataset_loader):
+    for data, target in dataset_loader:
+
+
         inputs, labels = data, target
         inputs = inputs.float()
         labels = labels.float()
         inputs, labels = inputs.to(device), labels.to(device)
+
         optimizer.zero_grad()
-
         outputs = model(inputs)
-
         loss = criterion(outputs, labels)
-
         loss.backward()
-
         optimizer.step()
 
         running_loss += loss.item()
 
-    return running_loss
+    return running_loss/len(dataset_loader.dataset)
 
 
 
 def test(model, dataset_loader, device, criterion):
     model.eval()
-
     hamming_acc = 0
-
     total = 0
-
     valid_loss = 0
 
     with torch.no_grad():
-        for i, (data, target) in enumerate(dataset_loader):
+        for data, target in dataset_loader:
             images, labels = data, target
 
             images = images.float()
@@ -105,15 +106,9 @@ def test(model, dataset_loader, device, criterion):
 
             outputs = model(images)
             valid_loss += criterion(outputs, labels).item()
-
-            pred = outputs.ge(0.5)
-
             # TODO: validation accuracy per label.
             # correct += 1 if pred.eq(labels.byte()).sum().item() == 9 else 0
-            hamming_acc+=hamming_score(labels.cpu().numpy()[0], pred.cpu().numpy()[0])
-
-    hamming_acc /= len(dataset_loader.dataset)
-    return valid_loss, hamming_acc
+    return valid_loss/len(dataset_loader.dataset)
 
 
 def hamming_score(true, pred):
@@ -135,9 +130,9 @@ if __name__ == '__main__':
 
     learning_rate = 1e-3
 
-    criterion = nn.MultiLabelSoftMarginLoss()
+    criterion = nn.MSELoss(reduction='sum')
 
-    epochs = 30
+    epochs = 60
     curr_epoch = 0
 
     criterion.to(device)
@@ -156,11 +151,13 @@ if __name__ == '__main__':
         split='train', time_steps = 100
         )
 
-    data_shape = train_dataset.__getitem__(0)[0].shape
+
+
+    data_shape = train_dataset[0][0].shape
 
     train_loader = torch_data.DataLoader(
         train_dataset,
-        batch_size=1, shuffle=True, num_workers=1
+        batch_size=8, shuffle=True, num_workers=1
         )
 
     val_dataset = MultilabelWMLoader(
@@ -169,7 +166,7 @@ if __name__ == '__main__':
         )
     val_loader = torch_data.DataLoader(
         val_dataset,
-        batch_size=1, shuffle=True, num_workers=1
+        batch_size=8, shuffle=True, num_workers=1
         )
 
     model = CNN3D(in_planes = data_shape[0])
@@ -187,23 +184,19 @@ if __name__ == '__main__':
     print(summary(model, data_shape))
     print("****************************************************************\n")
 
-    print("Epoch\tTrain Loss\tValidation Loss\tValidation Acc")
+    print("Epoch\tTrain Loss\tValidation Loss")
     while curr_epoch <= epochs:
         running_loss = train(
             model, train_loader,
             curr_epoch, device, optimizer, criterion
         )
-        valid_loss, accuracy = test(
+        valid_loss = test(
             model, val_loader,
             device, criterion
         )
         # record all the models that we have had so far.
         loss_history.append((
             running_loss, valid_loss
-        ))
-
-        acc_history.append((
-            accuracy
         ))
         # write model to disk.
 
@@ -217,10 +210,9 @@ if __name__ == '__main__':
             MODEL_PATH_PREFIX + '-{}.'.format(curr_epoch) + MODEL_PATH_EXT
         )
 
-        print('{}\t{:.5f}\t{:.5f}\t{:.3f}\t'.format(
+        print('{}\t{:.5f}\t\t{:.5f}'.format(
             curr_epoch,
             running_loss,
-            valid_loss,
-            accuracy
+            valid_loss
         ))
         curr_epoch+=1
