@@ -13,7 +13,7 @@ from torchsummary import summary
 from sklearn.metrics import confusion_matrix
 
 class MultilabelWMLoader(torch_data.Dataset):
-    def __init__(self, data_dir, split, num_classes = 1, time_steps = 100 ):
+    def __init__(self, data_dir, split, num_classes = 1, time_steps = 160 ):
         self.data_dir = data_dir
         self.split = split
         self.time_steps = time_steps
@@ -28,7 +28,7 @@ class MultilabelWMLoader(torch_data.Dataset):
         assert os.path.exists(data_bins)
         for each_file in glob.glob(data_bins + '\\' + '*.npy'):
             data = np.load(each_file)
-            # .reshape((100, 5, 22, 1))
+            # .reshape((160, 5, 22, 1))
             self.image_list.append(
                 data[0].reshape((1, self.time_steps, 5, 22))
             )
@@ -44,23 +44,37 @@ class MultilabelWMLoader(torch_data.Dataset):
 
 
 class CNN3D(nn.Module):
-    def __init__(self, num_classes=9, in_planes=100):
+    def __init__(self, num_classes=9, in_planes=1):
         super(CNN3D, self).__init__()
-
-        self.conv1 = nn.Conv3d(in_planes, 1, kernel_size=(1, 1, 1))
-
+        # N, C, D, H, W = 1, 1, 160, 5, 22
+        self.conv1 = nn.Conv3d(in_channels=in_planes, out_channels=5, kernel_size=(1, 1, 1))
+        self.conv2 = nn.Conv3d(in_channels=5, out_channels=1, kernel_size=(1, 1, 1))
+        self.dropout1 = nn.Dropout(p=0.6)
+        self.dropout2 = nn.Dropout(p=0.4)
+        self.fc1   = nn.Linear(200 , 3)
         self.softmax = nn.Sigmoid()
-
-        self.fc1   = nn.Linear(1100, 3)
 
 
     def forward(self, x):
-
         out = self.conv1(x)
         out = F.max_pool3d(out, 2)
-        out = out.view(x.size(0), -1)
+
+
+        out = self.conv2(out)
+        out = F.max_pool3d(out, 2)
+
+
+        out = out.view(out.size(0), -1)
+
+        if self.training:
+            out = self.dropout1(out)
+
 
         out = self.fc1(out)
+
+        if self.training:
+            out = self.dropout2(out)
+
         out = self.softmax(out)
 
         return out
@@ -125,7 +139,7 @@ def hamming_score(true, pred):
 
 
 if __name__ == '__main__':
-
+    torch.cuda.current_device()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     learning_rate = 1e-3
@@ -148,10 +162,8 @@ if __name__ == '__main__':
 
     train_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='train', time_steps = 100
+        split='train', time_steps = 160
         )
-
-
 
     data_shape = train_dataset[0][0].shape
 
@@ -162,8 +174,9 @@ if __name__ == '__main__':
 
     val_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='val', time_steps = 100
+        split='val', time_steps = 160
         )
+
     val_loader = torch_data.DataLoader(
         val_dataset,
         batch_size=8, shuffle=True, num_workers=1
@@ -171,8 +184,9 @@ if __name__ == '__main__':
 
     model = CNN3D(in_planes = data_shape[0])
 
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, amsgrad=False
+    optimizer = torch.optim.SGD(
+        model.parameters(), lr=learning_rate,
+        momentum=0.7
         )
     model.to(device)
 
