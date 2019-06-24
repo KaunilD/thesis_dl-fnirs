@@ -1,0 +1,221 @@
+\documentclass[a4paper,10pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[ansinew]{inputenc}
+
+\usepackage{lmodern}	% font definition
+\usepackage{amsmath}	% math fonts
+\usepackage{amsthm}
+\usepackage{amsfonts}
+
+\usepackage{tikz}
+
+%%%<
+\usepackage{verbatim}
+\usepackage[active,tightpage]{preview}
+\PreviewEnvironment{tikzpicture}
+\setlength\PreviewBorder{5pt}%
+%%%>
+
+\usetikzlibrary{decorations.pathmorphing} % noisy shapes
+\usetikzlibrary{fit}					% fitting shapes to coordinates
+\usetikzlibrary{backgrounds}	% drawing the background after the foreground
+
+\begin{document}
+
+\begin{figure}[htbp]
+\centering
+% The state vector is represented by a blue circle.
+% "minimum size" makes sure all circles have the same size
+% independently of their contents.
+\tikzstyle{ann} = [fill=white,inner sep=1pt]
+\tikzstyle{state}=[circle,
+                                    thick,
+                                    minimum size=1.2cm,
+                                    draw=blue!80,
+                                    fill=blue!20]
+
+% The measurement vector is represented by an orange circle.
+\tikzstyle{measurement}=[circle,
+                                                thick,
+                                                minimum size=1.2cm,
+                                                draw=green!80,
+                                                fill=green!25]
+
+% The control input vector is represented by a purple circle.
+\tikzstyle{input}=[circle,
+                                    thick,
+                                    minimum size=1.2cm,
+                                    draw=red!80,
+                                    fill=red!20]
+
+% The input, state transition, and measurement matrices
+% are represented by gray squares.
+% They have a smaller minimal size for aesthetic reasons.
+\tikzstyle{matrx}=[rectangle,
+                                    thick,
+                                    minimum size=1cm,
+                                    draw=gray!80,
+                                    fill=gray!20]
+
+% The system and measurement noise are represented by yellow
+% circles with a "noisy" uneven circumference.
+% This requires the TikZ library "decorations.pathmorphing".
+\tikzstyle{noise}=[circle,
+                                    thick,
+                                    minimum size=1.2cm,
+                                    draw=yellow!85!black,
+                                    fill=yellow!40,
+                                    decorate,
+                                    decoration={random steps,
+                                                            segment length=2pt,
+                                                            amplitude=2pt}]
+
+% Everything is drawn on underlying gray rectangles with
+% rounded corners.
+\tikzstyle{background}=[rectangle,
+                                     fill=gray!0,
+                                     inner sep=0.2cm,
+                                     rounded corners=5mm]
+
+\begin{tikzpicture}[>=latex,text height=1.5ex,text depth=0.25ex]
+    % "text height" and "text depth" are required to vertically
+    % align the labels with and without indices.
+  
+  % The various elements are conveniently placed using a matrix:
+  \matrix[row sep=0.5cm,column sep=0.5cm] {
+    % First line: Control input
+    		\node (0_0) [input]{}; &
+        \node (0_1) [measurement]{1};     &
+        \node (0_2) [state]{}; &
+        \node (0_3) [measurement]{2}; &
+        \node (0_4) [input]{};     &
+        \node (0_5) [measurement]{3}; &
+        \node (0_6) [state]{}; &
+        \node (0_7) [measurement]{4};     &
+        \node (0_8) [input]{}; &
+        \node (0_9) [measurement]{5}; &
+        \node (0_10) [state]{};     &
+        \node (0_11) [measurement]{6}; &
+        \node (0_12) [input]{}; &
+        \node (0_13) [measurement]{7}; &
+        \node (0_14) [state]{};     &
+        \node (0_15) [measurement]{8}; &
+        \node (0_16) [input]{}; &
+        \node (0_17) [measurement]{9};     &
+        \node (0_18) [state]{}; &
+        \node (0_19) [measurement]{10}; &
+        \node (0_20) [input]{};     &
+        \\
+        \node (1_0) [measurement]{11};     &
+        &
+        \node (1_2) [measurement]{12};     &
+        &
+        \node (1_4) [measurement]{13};     &
+        &
+        \node (1_6) [measurement]{141};     &
+        &
+        \node (1_8) [measurement]{15};     &
+        &
+        \node (1_10) [measurement]{16};     &
+        &
+        \node (1_11) [measurement]{17};     &
+        &
+        \node (1_13) [measurement]{18};     &
+        &
+        \node (1_15) [measurement]{19};     &
+        &
+        \node (1_17) [measurement]{20};     &
+        &
+        \node (1_19) [measurement]{21};     &
+        \\
+        \node (2_0) [input]{}; &
+        \node (2_1) [measurement]{22};     &
+        \node (2_2) [state]{}; &
+        \node (2_3) [measurement]{23}; &
+        \node (2_4) [input]{};     &
+        \node (2_5) [measurement]{24}; &
+        \node (2_6) [state]{}; &
+        \node (2_7) [measurement]{25};     &
+        \node (2_8) [input]{}; &
+        \node (2_9) [measurement]{26}; &
+        \node (2_10) [state]{};     &
+        \node (2_11) [measurement]{27}; &
+        \node (2_12) [input]{}; &
+        \node (2_13) [measurement]{28}; &
+        \node (2_14) [state]{};     &
+        \node (2_15) [measurement]{29}; &
+        \node (2_16) [input]{}; &
+        \node (2_17) [measurement]{30};     &
+        \node (2_18) [state]{}; &
+        \node (2_19) [measurement]{31}; &
+        \node (2_20) [input]{};     &
+        \\
+        \node (3_0) [measurement]{32};     &
+        &
+        \node (3_2) [measurement]{33};     &
+        &
+        \node (3_4) [measurement]{34};     &
+        &
+        \node (3_6) [measurement]{35};     &
+        &
+        \node (3_8) [measurement]{36};     &
+        &
+        \node (3_10) [measurement]{37};     &
+        &
+        \node (3_11) [measurement]{38};     &
+        &
+        \node (3_13) [measurement]{39};     &
+        &
+        \node (3_15) [measurement]{40};     &
+        &
+        \node (3_17) [measurement]{41};     &
+        &
+        \node (3_19) [measurement]{42};     &
+        \\
+        \node (4_0) [input]{}; &
+        \node (4_1) [measurement]{43};     &
+        \node (4_2) [state]{}; &
+        \node (4_3) [measurement]{44}; &
+        \node (4_4) [input]{};     &
+        \node (4_5) [measurement]{45}; &
+        \node (4_6) [state]{}; &
+        \node (4_7) [measurement]{46};     &
+        \node (4_8) [input]{}; &
+        \node (4_9) [measurement]{47}; &
+        \node (4_10) [state]{};     &
+        \node (4_11) [measurement]{48}; &
+        \node (4_12) [input]{}; &
+        \node (4_13) [measurement]{49}; &
+        \node (4_14) [state]{};     &
+        \node (4_15) [measurement]{50}; &
+        \node (4_16) [input]{}; &
+        \node (4_17) [measurement]{51};     &
+        \node (4_18) [state]{}; &
+        \node (4_19) [measurement]{52}; &
+        \node (4_20) [input]{};     &
+        \\
+    };
+    
+    
+    % Now that the diagram has been drawn, background rectangles
+    % can be fitted to its elements. This requires the TikZ
+    % libraries "fit" and "background".
+    % Control input and measurement are labeled. These labels have
+    % not been translated to English as "Measurement" instead of
+    % "Messung" would not look good due to it being too long a word.
+    \begin{pgfonlayer}{background}
+        \node [background,
+                    fit=(0_0) (4_20)] {};
+    \end{pgfonlayer}
+    \draw[arrows=<->,line width=.4pt](-18,4.6)--(18,4.6);
+    \draw[arrows=<->,line width=.4pt](-18.5,4.8)--(-18.5,-4.8);
+    \node[ann] at (0,4.5) {\huge{22}};
+    \node[ann] at (-18.5,0) {\huge{5}};
+\end{tikzpicture}
+
+\caption{Kalman filter system model}
+\end{figure}
+
+\end{document}

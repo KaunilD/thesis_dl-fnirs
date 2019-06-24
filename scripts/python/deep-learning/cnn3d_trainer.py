@@ -47,11 +47,11 @@ class CNN3D(nn.Module):
     def __init__(self, num_classes=9, in_planes=1):
         super(CNN3D, self).__init__()
         # N, C, D, H, W = 1, 1, 160, 5, 22
-        self.conv1 = nn.Conv3d(in_channels=in_planes, out_channels=5, kernel_size=(1, 1, 1))
+        self.conv1 = nn.Conv3d(in_channels=in_planes, out_channels=5, kernel_size=(65, 1, 2))
         self.conv2 = nn.Conv3d(in_channels=5, out_channels=1, kernel_size=(1, 1, 1))
         self.dropout1 = nn.Dropout(p=0.6)
         self.dropout2 = nn.Dropout(p=0.4)
-        self.fc1   = nn.Linear(200 , 3)
+        self.fc1   = nn.Linear(120 , 3)
         self.softmax = nn.Sigmoid()
 
 
