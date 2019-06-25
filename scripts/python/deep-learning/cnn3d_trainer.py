@@ -12,6 +12,9 @@ import glob
 from torchsummary import summary
 from sklearn.metrics import confusion_matrix
 
+import plotly.io as pio
+import plotly.plotly as py
+import plotly.graph_objs as go
 class MultilabelWMLoader(torch_data.Dataset):
     def __init__(self, data_dir, split, num_classes = 1, time_steps = 160 ):
         self.data_dir = data_dir
@@ -146,7 +149,7 @@ if __name__ == '__main__':
 
     criterion = nn.MSELoss(reduction='sum')
 
-    epochs = 60
+    epochs = 6
     curr_epoch = 0
 
     criterion.to(device)
@@ -230,3 +233,37 @@ if __name__ == '__main__':
             valid_loss
         ))
         curr_epoch+=1
+
+    random_x = np.linspace(1, epochs, epochs)
+    # Create traces
+    trace0 = go.Scatter(
+        x = random_x,
+        y = [i[0] for i in loss_history],
+        mode = 'lines+markers',
+        name = 'train-loss'
+    )
+
+    trace1 = go.Scatter(
+        x = random_x,
+        y = [i[1] for i in loss_history],
+        mode = 'lines+markers',
+        name = 'validation-loss'
+    )
+    data = [trace0, trace1]
+    layout = go.Layout(
+        title= 'TRAINING SNAPSHOT',
+        hovermode= 'closest',
+        xaxis= dict(
+            title= 'EPOCHS',
+            ticklen= 5,
+            zeroline= False,
+            gridwidth= 2,
+        ),
+        yaxis=dict(
+            title= 'LOSS',
+            ticklen= 5,
+            gridwidth= 2,
+        ),)
+    fig = go.Figure(data, layout=layout)
+    py.iplot(fig)
+    pio.write_image(fig, 'newplot.png')

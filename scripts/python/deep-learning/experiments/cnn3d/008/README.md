@@ -47,6 +47,10 @@ Estimated Total Size (MB): 1.78
 ##### Training
 
 ```
+![plot](newplot.png)
+```
+
+```
 Epoch   Train Loss      Validation Loss
 0       1.28396         1.28639
 1       1.37570         1.10381
