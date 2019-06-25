@@ -30,7 +30,7 @@ class MultilabelWMLoader(torch_data.Dataset):
             data = np.load(each_file)
             # .reshape((160, 5, 22, 1))
             self.image_list.append(
-                data[0].reshape((1, self.time_steps, 5, 22))
+                data[0].reshape((1, self.time_steps, 5, 44))
             )
             self.label_list.append(data[1])
 
@@ -51,7 +51,7 @@ class CNN3D(nn.Module):
         self.conv2 = nn.Conv3d(in_channels=5, out_channels=1, kernel_size=(1, 1, 1))
         self.dropout1 = nn.Dropout(p=0.6)
         self.dropout2 = nn.Dropout(p=0.4)
-        self.fc1   = nn.Linear(120 , 3)
+        self.fc1   = nn.Linear(460 , 3)
         self.softmax = nn.Sigmoid()
 
 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
 
     train_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='train', time_steps = 160
+        split='train', time_steps = 250
         )
 
     data_shape = train_dataset[0][0].shape
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     val_dataset = MultilabelWMLoader(
         data_dir='C:\\Users\\dhruv\\Development\\git\\thesis_dl-fnirs\\data\\multilabel',
-        split='val', time_steps = 160
+        split='val', time_steps = 250
         )
 
     val_loader = torch_data.DataLoader(
