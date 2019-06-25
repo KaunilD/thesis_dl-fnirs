@@ -61,8 +61,8 @@ class CNN3D(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        out = self.bn1(out)
         out = F.max_pool3d(out, 2)
+        out = self.bn1(out)
 
 
         out = self.conv2(out)
