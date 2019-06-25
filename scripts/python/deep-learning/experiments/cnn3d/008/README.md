@@ -43,6 +43,7 @@ Estimated Total Size (MB): 1.78
 | only session 1 from [mindfulness/benchmark_tasks/fNIRS_Data](https://github.com/lmhirshf/mindfulness/tree/master/benchmark_tasks/data/fNIRS_Data) and [Experiments/Experiment7000/](https://github.com/lmhirshf/Experiments/Experiment7000/) | source experiments |
 | regression; default3                                         | label type         |
 | [ wm, a, v ] => [off = 0, low = 1, high = 2]                 | label config       |
+| 5x44                                                         | Shape              |
 
 ##### Training
 
@@ -115,4 +116,4 @@ Epoch   Train Loss      Validation Loss
 
 ##### Observations
 
-1. lowest accuracy so far. check plots for overfit
+1. lowest loss so far. check plots for overfit

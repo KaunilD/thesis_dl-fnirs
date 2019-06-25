@@ -51,6 +51,7 @@ class CNN3D(nn.Module):
         super(CNN3D, self).__init__()
         # N, C, D, H, W = 1, 1, 160, 5, 22
         self.conv1 = nn.Conv3d(in_channels=in_planes, out_channels=5, kernel_size=(65, 1, 2))
+        self.bn1 = nn.BatchNorm3d(5)
         self.conv2 = nn.Conv3d(in_channels=5, out_channels=1, kernel_size=(1, 1, 1))
         self.dropout1 = nn.Dropout(p=0.6)
         self.dropout2 = nn.Dropout(p=0.4)
@@ -60,6 +61,7 @@ class CNN3D(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
+        out = self.bn1(out)
         out = F.max_pool3d(out, 2)
 
 
@@ -149,7 +151,7 @@ if __name__ == '__main__':
 
     criterion = nn.MSELoss(reduction='sum')
 
-    epochs = 6
+    epochs = 60
     curr_epoch = 0
 
     criterion.to(device)
