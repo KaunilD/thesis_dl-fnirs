@@ -41,7 +41,7 @@ class MultilabelWMLoader(torch_data.Dataset):
                 data[0].reshape((2, self.time_steps, 5, data[0].shape[3]))
             )
 
-            self.label_list.append(data[1][1])
+            self.label_list.append(data[1][2])
 
     def __getitem__(self, index):
 
