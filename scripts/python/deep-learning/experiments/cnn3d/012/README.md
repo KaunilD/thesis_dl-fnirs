@@ -4,10 +4,10 @@
 | hyp-params    | value                    |
 | :------------ | ------------------------ |
 | epochs        | 60                      |
-| loss          | MSE |
+| loss          | cross entropy loss |
 | optimizer     | SGD                   |
 | learning rate | 0.001                    |
-| accuracy      | MSE            |
+| accuracy      | negative log liklihood |
 | momentum | 0.7 |
 
 ##### Model: 3D CNN
@@ -50,8 +50,8 @@ Estimated Total Size (MB): 0.63
 | none                                                         | normalization      |
 | only session 1 from [mindfulness/benchmark_tasks/fNIRS_Data](https://github.com/lmhirshf/mindfulness/tree/master/benchmark_tasks/data/fNIRS_Data) and [Experiments/Experiment7000/](https://github.com/lmhirshf/Experiments/Experiment7000/) | source experiments |
 | regression; default3                                         | label type         |
-| [ wm, a, v ] => [off = 0, low = 1, high = 2]                 | label config       |
-| 5x44                                                         | Shape              |
+| [ wm ] => [off = 0, low = 1, high = 2]                       | label config       |
+| 5x22                                                         | Shape              |
 
 ##### Training
 
@@ -124,4 +124,4 @@ Epoch   Train Loss      Validation Loss
 
 ##### Observations
 
-1.
+1. Same as 011
