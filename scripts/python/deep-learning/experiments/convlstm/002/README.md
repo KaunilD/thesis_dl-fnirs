@@ -62,4 +62,4 @@ Epoch   Train Loss      Validation Loss Validation Acc
 
 ##### Observations
 
-1. Simple model, it works
+1. Added an LSTM block. no improvements
