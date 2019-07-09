@@ -43,7 +43,7 @@ class LSTMDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum["class"]
 
-            self.image_list.append(image[5:60])
+            self.image_list.append(image[50:80])
             self.label_list.append(datum["wl_label"][0])
 
     def __getitem__(self, index):
@@ -203,8 +203,13 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
         self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 2, 1)
+        self.convLSTM2d2 = ConvLSTM2D((5, 11), 2, 2, 1)
         self.fc1 = nn.Linear(110, 3)
-
+        """
+        self.fc2 = nn.Linear(1000, 500)
+        self.fc3 = nn.Linear(500, 250)
+        self.fc4 = nn.Linear(250, 3)
+        """
     def forward(self, x, hidden_states = None):
 
         b_idx, ts, n_ch, w, h = x.size()
@@ -212,15 +217,23 @@ class ConvLSTMNet(nn.Module):
             self.h1, self.c1 = hidden_states
         else:
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
+            self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
 
         for t in range(ts):
             self.h1, self.c1 = self.convLSTM2d1(
                 x[:, t, :, :, :], (self.h1, self.c1)
             )
+            self.h2, self.c2 = self.convLSTM2d2(
+                self.h1, (self.h2, self.c2)
+            )
 
-        out = self.fc1(self.h1.view(self.h1.size(0), -1))
+
+        out = self.fc1(self.h2.view(self.h2.size(0), -1))
 
         """
+        out = self.fc2(out)
+        out = self.fc3(out)
+        out = self.fc4(out)
 
             h1, c1 = self.convLSTM2d1(
                 x[0], (self.h1, self.c1)
