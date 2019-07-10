@@ -18,7 +18,7 @@
 | normalization      | none                                                         |
 | source experiments | only session 1 from [mindfulness/benchmark_tasks/fNIRS_Data](https://github.com/lmhirshf/mindfulness/tree/master/benchmark_tasks/data/fNIRS_Data) and [Experiments/Experiment7000/](https://github.com/lmhirshf/Experiments/Experiment7000/) |
 | label type         | regression; default3                                         |
-| label config       | [ wm ] => [off = 0, low = 1, high = 2]                       |
+| label config       | [ binary ] => [cr = 0, others = 1]                       |
 | Shape              | 2x5x11                                                         |
 
 ##### Training
@@ -62,4 +62,4 @@ Epoch   Train Loss      Validation Loss Validation Acc
 
 ##### Observations
 
-1. Simple model, it works
+1. Simple model. it works
