@@ -50,7 +50,7 @@ Estimated Total Size (MB): 0.63
 | normalization      | none                                                         |
 | source experiments | only session 1 from [mindfulness/benchmark_tasks/fNIRS_Data](https://github.com/lmhirshf/mindfulness/tree/master/benchmark_tasks/data/fNIRS_Data) and [Experiments/Experiment7000/](https://github.com/lmhirshf/Experiments/Experiment7000/) |
 | label type         | regression; default3                                         |
-| label config       | [ wm ] => [off = 0, low = 1, high = 2]                       |
+| label config       | [ al ] => [off = 0, low = 1, high = 2]                       |
 | Shape              | 5x22                                                         |
 
 ##### Training
