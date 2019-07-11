@@ -43,7 +43,7 @@ class LSTMDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum["class"]
 
-            self.image_list.append(image[50:80])
+            self.image_list.append(image[:60])
             self.label_list.append(datum["wl_label"][0])
 
     def __getitem__(self, index):
