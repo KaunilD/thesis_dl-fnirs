@@ -205,6 +205,7 @@ class ConvLSTMNet(nn.Module):
         self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 2, 1)
         self.convLSTM2d2 = ConvLSTM2D((5, 11), 2, 2, 1)
         self.fc1 = nn.Linear(110, 3)
+        self.dropout1 = nn.Dropout(p=0.6)
         """
         self.fc2 = nn.Linear(1000, 500)
         self.fc3 = nn.Linear(500, 250)
@@ -226,9 +227,10 @@ class ConvLSTMNet(nn.Module):
             self.h2, self.c2 = self.convLSTM2d2(
                 self.h1, (self.h2, self.c2)
             )
-
-
-        out = self.fc1(self.h2.view(self.h2.size(0), -1))
+        out = self.h2.view(self.h2.size(0), -1)
+        if self.training:
+            out = self.dropout1(out)
+        out = self.fc1(out)
 
         """
         out = self.fc2(out)
