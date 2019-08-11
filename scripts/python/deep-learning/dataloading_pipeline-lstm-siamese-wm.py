@@ -318,37 +318,53 @@ if __name__ == '__main__':
     print(train_ids)
     print(val_ids)
 
-
+    TIME_CROP_LENGTH = 100
     # #### Get total rows in wl = wm for each off, low, high
 
 
     train_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in train_ids:
-        for participant_task in participant_taskdata[participant_id]:
+        for t in participant_taskdata[participant_id]:
+            wm_label = t["wl_label"][0]
+            duration = t["duration"]
 
-            duration = participant_task["duration"]
-            participant_task["data"] = np.sum(participant_task["data"], axis=1)
+            t["data"] = np.sum(t["data"], axis=1)
 
-            participant_task["data"][:duration] = participant_task["data"][:duration]/\
-                np.linalg.norm(participant_task["data"][:duration], ord=np.inf, axis=0, keepdims=True)
-            participant_task["data"] = np.reshape(participant_task["data"], (3000, 1, 5, 11))
+            mask = t["data"][:duration]==0
+            t["data"][:duration] = t["data"][:duration]+mask*0.0001
+            t["data"][:duration] = t["data"][:duration]/\
+                (np.linalg.norm(t["data"][:duration], ord=np.inf, axis=0, keepdims=True)+0.001)
+            t["data"] = np.reshape(t["data"], (3000, 1, 5, 11))
 
-            train_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
+            if wm_label in [1, 2]:
+                for i in range(0, 100, 20):
+                    train_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
+            else:
+                train_labeled_task_bin[wm_label].append(t["data"][:100])
     print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1]), len(train_labeled_task_bin[2])])
 
 
 
     val_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in val_ids:
-        for participant_task in participant_taskdata[participant_id]:
-            duration = participant_task["duration"]
-            participant_task["data"] = np.sum(participant_task["data"], axis=1)
+        for t in participant_taskdata[participant_id]:
+            wm_label = t["wl_label"][0]
 
-            participant_task["data"][:duration] = participant_task["data"][:duration]/\
-                np.linalg.norm(participant_task["data"][:duration], ord=np.inf, axis=0, keepdims=True)
-            participant_task["data"] = np.reshape(participant_task["data"], (3000, 1, 5, 11))
-            
-            val_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
+            duration = t["duration"]
+            t["data"] = np.sum(t["data"], axis=1)
+
+            mask = t["data"][:duration]==0
+            t["data"][:duration] = t["data"][:duration]+mask*0.0001
+
+            t["data"][:duration] = t["data"][:duration]/\
+                (np.linalg.norm(t["data"][:duration], ord=np.inf, axis=0, keepdims=True)+0.001)
+            t["data"] = np.reshape(t["data"], (3000, 1, 5, 11))
+
+            if wm_label in [1, 2]:
+                for i in range(0, 100, 20):
+                    val_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
+            else:
+                val_labeled_task_bin[wm_label].append(t["data"][:100])
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1]), len(val_labeled_task_bin[2])])
 
     print("Different pairs: ", 700*78 + 78*154 + 154*700)
@@ -373,8 +389,8 @@ if __name__ == '__main__':
                 if a == b : continue
                 train_pairs[0].append(
                     (
-                        [train_labeled_task_bin[i][a]["data"][50:400], i], # i is the wm-GT label
-                        [train_labeled_task_bin[i][b]["data"][50:400], i],
+                        [train_labeled_task_bin[i][a], i], # i is the wm-GT label
+                        [train_labeled_task_bin[i][b], i],
                         0
                     )
                 )
@@ -387,8 +403,8 @@ if __name__ == '__main__':
         for task1 in train_labeled_task_bin[lab1]:
             for task2 in train_labeled_task_bin[lab2]:
                 train_pairs[1].append((
-                    [task1["data"][50:400], lab1], # lab1, lab2 are the wm-gt labels
-                    [task2["data"][50:400], lab2],
+                    [task1, lab1], # lab1, lab2 are the wm-gt labels
+                    [task2, lab2],
                     1
                 ))
 
@@ -411,8 +427,8 @@ if __name__ == '__main__':
     np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data_siamese_train", train_pairs)
     """
 
-    NUM_TRAIN_SAMPLES = 20000
-    NUM_TEST_SAMPLES = 10000
+    NUM_TRAIN_SAMPLES = 40000
+    NUM_TEST_SAMPLES = 20000
 
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
@@ -424,7 +440,6 @@ if __name__ == '__main__':
         print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
         np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/1/" + str(idx), data)
     print()
-
     # ##### validation set
     val_label_examples = {0:[1, 2], 1:[0, 2], 2:[0, 1]}
     val_pairs = []
@@ -435,10 +450,10 @@ if __name__ == '__main__':
             t3 = val_label_examples[i][1]
 
             val_pairs.append({
-                "t1": [task["data"][50:400], i],
-                "t2": [random.choice(val_labeled_task_bin[t2])["data"][50:400], t2],
-                "t3": [random.choice(val_labeled_task_bin[t3])["data"][50:400], t3],
-                "t4": [random.choice(val_labeled_task_bin[i])["data"][50:400], i]
+                "t1": [task, i],
+                "t2": [random.choice(val_labeled_task_bin[t2]), t2],
+                "t3": [random.choice(val_labeled_task_bin[t3]), t3],
+                "t4": [random.choice(val_labeled_task_bin[i]), i]
             })
     print("Saved validation data to disk.")
     np.save("../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val", val_pairs)
@@ -462,8 +477,8 @@ if __name__ == '__main__':
                 if a == b : continue
                 siamese_pairs_val[0].append(
                     (
-                        [val_labeled_task_bin[i][a]["data"][50:400], i],
-                        [val_labeled_task_bin[i][b]["data"][50:400], i],
+                        [val_labeled_task_bin[i][a], i],
+                        [val_labeled_task_bin[i][b], i],
                         0
                     )
                 )
@@ -476,8 +491,8 @@ if __name__ == '__main__':
         for task1 in val_labeled_task_bin[lab1]:
             for task2 in val_labeled_task_bin[lab2]:
                 siamese_pairs_val[1].append((
-                    [task1["data"][50:400], lab1],
-                    [task2["data"][50:400], lab2],
+                    [task1, lab1],
+                    [task2, lab2],
                     1
                 ))
 
