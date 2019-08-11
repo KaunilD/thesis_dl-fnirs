@@ -334,19 +334,19 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        #self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=15, kernel_size=(2, 2, 2))
-        #self.bn1 = nn.BatchNorm3d(15)
+        self.conv3d1 = nn.Conv3d(in_channels=1, out_channels=15, kernel_size=(2, 2, 2))
+        self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.AvgPool3d((50, 1, 1))
-
+        self.relu1 = nn.ReLU()
         #self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 1, 1), stride=(5, 2, 2))
         #self.bn2 = nn.BatchNorm3d(30)
         #self.pool2 = nn.AvgPool3d((1, 1, 1))
 
 
-        self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 8, 1)
-        self.convLSTM2d2 = ConvLSTM2D((5, 11), 8, 64, 1)
+        self.convLSTM2d1 = ConvLSTM2D((4, 10), 15, 8, 1)
+        self.convLSTM2d2 = ConvLSTM2D((4, 10), 8, 64, 1)
 
-        self.fc1 = nn.Linear(3520, 1760)
+        self.fc1 = nn.Linear(2560, 1760)
         self.fc2 = nn.Linear(1760, 880)
         self.fc3 = nn.Linear(880, 440)
         self.fc4 = nn.Linear(440, 220)
@@ -369,9 +369,10 @@ class ConvLSTMNet(nn.Module):
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
 
-        #out = self.conv3d1(out)
+        out = self.conv3d1(out)
         out = self.pool1(out)
-        #out = self.bn1(out)
+        out = self.relu1(out)
+        out = self.bn1(out)
         """
         out = self.conv3d2(out)
         out = self.pool2(out)
@@ -465,7 +466,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 150), 1: sample(train_data_list_1, 50)}, count=10000
+        {0: sample(train_data_list_0, 1999), 1: sample(train_data_list_1, 1999)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -474,7 +475,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 30), 1: sample(test_data_list_1, 30)}, count=3000
+        {0: sample(test_data_list_0, 999), 1: sample(test_data_list_1, 999)}, count=3000
     )
     print("Test dataset loaded.")
 
@@ -516,7 +517,7 @@ if __name__ == '__main__':
             model, train_loader,
             curr_epoch, device, optimizer, criterion
         )
-        break
+        
 
         test_running_loss, test_accuracy = test(
             model, test_loader,
