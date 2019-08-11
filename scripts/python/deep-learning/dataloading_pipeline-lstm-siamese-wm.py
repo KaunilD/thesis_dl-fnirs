@@ -8,6 +8,7 @@ import os
 import random
 from random import shuffle
 
+from sklearn.preprocessing import normalize
 
 """
 Author: Trevor Jordan Grant.
@@ -324,6 +325,12 @@ if __name__ == '__main__':
     train_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in train_ids:
         for participant_task in participant_taskdata[participant_id]:
+
+            duration = participant_task["duration"]
+            participant_task["data"] = np.sum(participant_task["data"], axis=1)
+
+            participant_task["data"] = participant_task["data"][:duration]/\
+                np.linalg.norm(participant_task["data"], ord=np.inf, axis=0, keepdims=True)
             train_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
     print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1]), len(train_labeled_task_bin[2])])
 
@@ -332,6 +339,11 @@ if __name__ == '__main__':
     val_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in val_ids:
         for participant_task in participant_taskdata[participant_id]:
+            duration = participant_task["duration"]
+            participant_task["data"] = np.sum(participant_task["data"], axis=1)
+
+            participant_task["data"] = participant_task["data"][:duration]/\
+                np.linalg.norm(participant_task["data"], ord=np.inf, axis=0, keepdims=True)
             val_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1]), len(val_labeled_task_bin[2])])
 
@@ -474,7 +486,7 @@ if __name__ == '__main__':
 
     # save matching
     for idx, data in enumerate(siamese_pairs_val[0][0:NUM_TEST_SAMPLES]):
-        print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
+        print("Saved matching pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
         np.save("../../../data/multilabel/all/mindfulness/siamese/wm/test/0/" + str(idx), data)
     print()
 
