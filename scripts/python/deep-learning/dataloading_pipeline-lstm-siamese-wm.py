@@ -329,8 +329,8 @@ if __name__ == '__main__':
             duration = participant_task["duration"]
             participant_task["data"] = np.sum(participant_task["data"], axis=1)
 
-            participant_task["data"] = participant_task["data"][:duration]/\
-                np.linalg.norm(participant_task["data"], ord=np.inf, axis=0, keepdims=True)
+            participant_task["data"][:duration] = participant_task["data"][:duration]/\
+                np.linalg.norm(participant_task["data"][:duration], ord=np.inf, axis=0, keepdims=True)
             train_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
     print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1]), len(train_labeled_task_bin[2])])
 
@@ -342,8 +342,8 @@ if __name__ == '__main__':
             duration = participant_task["duration"]
             participant_task["data"] = np.sum(participant_task["data"], axis=1)
 
-            participant_task["data"] = participant_task["data"][:duration]/\
-                np.linalg.norm(participant_task["data"], ord=np.inf, axis=0, keepdims=True)
+            participant_task["data"][:duration] = participant_task["data"][:duration]/\
+                np.linalg.norm(participant_task["data"][:duration], ord=np.inf, axis=0, keepdims=True)
             val_labeled_task_bin[participant_task["wl_label"][0]].append(participant_task)
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1]), len(val_labeled_task_bin[2])])
 
