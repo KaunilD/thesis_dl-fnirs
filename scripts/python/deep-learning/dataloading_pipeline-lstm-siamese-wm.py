@@ -207,14 +207,14 @@ def read_tasks(condition, data):
             dxy_series = dxyData[start:end, :]
 
             # a 100x5x22 list
-            oxy_dxy_series_mat = np.zeros((duration,2, 5, 11))
+            oxy_dxy_series_mat = np.zeros((duration,1, 5, 11))
 
             for ts, (oxy_slice, dxy_slice) in enumerate(zip(oxy_series, dxy_series)):
                 oxy_slice = get_52_5x11_mat(oxy_slice)
                 dxy_slice = get_52_5x11_mat(dxy_slice)
 
                 #oxy_dxy_series_mat[ts] = np.hstack([oxy_slice, dxy_slice])
-                oxy_dxy_series_mat[ts] = np.array([oxy_slice, dxy_slice])
+                oxy_dxy_series_mat[ts] = np.array(oxy_slice)
             tasks.append(
                 {
                     "class": class_,
@@ -253,7 +253,7 @@ if __name__ == '__main__':
     ]
     """
 
-    for idx, (cond, dat) in enumerate(zip(conditions, data)):
+    for idx, (cond, dat) in enumerate(zip(conditions[:5], data[:5])):
 
         participant_id = os.path.basename(cond)[0:4]
 
@@ -328,12 +328,13 @@ if __name__ == '__main__':
             wm_label = t["wl_label"][0]
             duration = t["duration"]
 
-            t["data"] = np.sum(t["data"], axis=1)
+            #t["data"] = np.sum(t["data"], axis=1)
 
             mask = t["data"][:duration]==0
             t["data"][:duration] = t["data"][:duration]+mask*0.0001
             t["data"][:duration] = t["data"][:duration]/\
                 (np.linalg.norm(t["data"][:duration], ord=np.inf, axis=0, keepdims=True)+0.001)
+            print(t["data"].shape)
             t["data"] = np.reshape(t["data"], (3000, 1, 5, 11))
 
             if wm_label in [1, 2]:
@@ -351,7 +352,7 @@ if __name__ == '__main__':
             wm_label = t["wl_label"][0]
 
             duration = t["duration"]
-            t["data"] = np.sum(t["data"], axis=1)
+            #t["data"] = np.sum(t["data"], axis=1)
 
             mask = t["data"][:duration]==0
             t["data"][:duration] = t["data"][:duration]+mask*0.0001
@@ -427,8 +428,8 @@ if __name__ == '__main__':
     np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data_siamese_train", train_pairs)
     """
 
-    NUM_TRAIN_SAMPLES = 40000
-    NUM_TEST_SAMPLES = 20000
+    NUM_TRAIN_SAMPLES = 20000
+    NUM_TEST_SAMPLES = 5000
 
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):

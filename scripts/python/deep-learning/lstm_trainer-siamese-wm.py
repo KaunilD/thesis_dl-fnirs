@@ -230,7 +230,6 @@ def train(model, dataset_loader, epoch, device, optimizer, criterion):
     running_loss = 0.0
     total = 0
     for i , (data, target) in enumerate(dataset_loader):
-
         print('Train: [Batch: {} ({:.0f}%)]'
               .format(
                   i + 1,
@@ -278,7 +277,6 @@ def test(model, dataset_loader, device, criterion):
         outputs = model(input1, input2)
 
         _, pred = torch.max(outputs, 1)
-
         correct += (pred == labels).sum()
 
         """
@@ -317,14 +315,22 @@ def validate(model, dataset_loader, device, criterion):
             output2 = model(input1, input3)
             output3 = model(input1, input4)
 
-            greater_mask = output3[:, 0].gt(output1[:, 0]).cpu().numpy() & output3[:, 0].gt(output2[:, 0]).cpu().numpy()
+            _, pred1 = torch.max(output1, 1)
+            _, pred2 = torch.max(output2, 1)
+            _, pred3 = torch.max(output3, 1)
+
+            pred1 = pred1 == 1
+            pred2 = pred2 == 1
+            pred3 = pred3 == 0
+
+            greater_mask = pred1 & pred2 & pred3
 
             """
             valid_loss += criterion(outputs, labels).item()
             _, predicted = torch.max(outputs.data, 1)
             """
-            total += input1.size(0)
-            correct += np.sum(greater_mask)
+            total += 1
+            correct += int(greater_mask)
 
     accuracy = 100 * correct / total
     return accuracy
@@ -426,7 +432,7 @@ if __name__ == '__main__':
     print("torch.cuda.current_device() =", torch.cuda.current_device())
 
 
-    device = torch.device("gpu" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ConvLSTMNet()
 
     criterion = nn.CrossEntropyLoss()
@@ -462,7 +468,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 19), 1: sample(train_data_list_1, 19)}, count=10000
+        {0: sample(train_data_list_0, 100), 1: sample(train_data_list_1, 100)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -471,7 +477,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
+        {0: sample(test_data_list_0, 99), 1: sample(test_data_list_1, 99)}, count=3000
     )
     print("Test dataset loaded.")
 
@@ -497,7 +503,7 @@ if __name__ == '__main__':
 
     val_loader = torch_data.DataLoader(
         val_dataloader,
-        batch_size=16, shuffle=False, num_workers=0
+        batch_size=1, shuffle=False, num_workers=0
     )
 
 
@@ -524,8 +530,6 @@ if __name__ == '__main__':
             model, val_loader,
             device, criterion
         )
-
-        scheduler.step(val_accuracy)
         # record all the models that we have had so far.
         train_loss_history.append(
             train_running_loss
