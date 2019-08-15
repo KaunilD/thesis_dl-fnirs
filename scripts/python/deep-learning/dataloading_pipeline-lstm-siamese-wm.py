@@ -319,6 +319,31 @@ if __name__ == '__main__':
 
     TIME_CROP_LENGTH = 300
     # #### Get total rows in wl = wm for each off, low, high
+    """
+    NORMALIZING PARTICIPANTS
+    """
+    for participant_id in participant_taskdata:
+        durations = []
+        data = []
+
+        for task in participant_taskdata[participant_id]:
+            data.append(task["data"])
+            durations.append(task["duration"])
+
+        cat_tasks = np.concatenate(data)
+
+        mask = cat_tasks == 0
+        cat_tasks+=mask*0.0001
+
+        cat_tasks_mean = np.mean(cat_tasks, axis=0)
+        cat_tasks_std = np.std(cat_tasks, axis=0)
+        cat_tasks-=cat_tasks_mean
+        cat_tasks/=cat_tasks_std
+
+        current_ts = 0
+        for idx, task in enumerate(participant_taskdata[participant_id]):
+            task["data"] = cat_tasks[current_ts:current_ts+durations[idx]]
+            current_ts+=durations[idx]
 
 
     train_labeled_task_bin = {0:[], 1:[]}
@@ -326,16 +351,6 @@ if __name__ == '__main__':
         for t in participant_taskdata[participant_id]:
 
             wm_label = t["wl_label"][0]
-            duration = t["duration"]
-
-            #t["data"] = np.sum(t["data"], axis=1)
-
-            mask = t["data"][:duration] == 0
-            t["data"][:duration] = t["data"][:duration]+mask*0.0001
-            t["data"][:duration] = t["data"][:duration]/\
-                (np.linalg.norm(t["data"][:duration], ord=np.inf, axis=0, keepdims=True)+0.001)
-            print(t["data"].shape)
-            t["data"] = np.reshape(t["data"], (3000, 1, 5, 11))
 
             if wm_label in [1, 2]:
                 for i in range(0, 100, 20):
@@ -351,25 +366,12 @@ if __name__ == '__main__':
         for t in participant_taskdata[participant_id]:
             wm_label = t["wl_label"][0]
 
-            duration = t["duration"]
-            #t["data"] = np.sum(t["data"], axis=1)
-
-            mask = t["data"][:duration]==0
-            t["data"][:duration] = t["data"][:duration]+mask*0.0001
-
-            t["data"][:duration] = t["data"][:duration]/\
-                (np.linalg.norm(t["data"][:duration], ord=np.inf, axis=0, keepdims=True)+0.001)
-            t["data"] = np.reshape(t["data"], (3000, 1, 5, 11))
-
             if wm_label in [1, 2]:
                 for i in range(0, 100, 20):
                     val_labeled_task_bin[1].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
                 val_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1])])
-
-    print("Different pairs: ", 700*78 + 78*154 + 154*700)
-    print("Matching pairs: ", 700*700 + 78*78 + 154*154)
 
     train_pairs = {0:[], 1:[]}
 
