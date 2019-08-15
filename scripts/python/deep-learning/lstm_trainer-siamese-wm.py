@@ -28,9 +28,8 @@ class LSTMValDataLoader(torch_data.Dataset):
             im1 = datum["t1"][0]
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
-            im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1, im2, im3, im4))
+            self.image_list.append((im1, im2, im3))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -308,22 +307,19 @@ def validate(model, dataset_loader, device, criterion):
                   ), end='\r')
 
 
-            input1, input2, input3, input4 = data[0].float(), data[1].float(), data[2].float(), data[3].float()
-            input1, input2, input3, input4 = input1.to(device), input2.to(device), input3.to(device), input4.to(device)
+            input1, input2, input3= data[0].float(), data[1].float(), data[2].float()
+            input1, input2, input3= input1.to(device), input2.to(device), input3.to(device)
 
             output1 = model(input1, input2)
             output2 = model(input1, input3)
-            output3 = model(input1, input4)
 
             _, pred1 = torch.max(output1, 1)
             _, pred2 = torch.max(output2, 1)
-            _, pred3 = torch.max(output3, 1)
 
             pred1 = pred1 == 1
-            pred2 = pred2 == 1
-            pred3 = pred3 == 0
+            pred2 = pred2 == 0
 
-            greater_mask = pred1 & pred2 & pred3
+            greater_mask = pred1 & pred2
 
             """
             valid_loss += criterion(outputs, labels).item()
@@ -468,7 +464,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 100), 1: sample(train_data_list_1, 100)}, count=10000
+        {0: sample(train_data_list_0, 10), 1: sample(train_data_list_1, 10)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -477,7 +473,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 99), 1: sample(test_data_list_1, 99)}, count=3000
+        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
     )
     print("Test dataset loaded.")
 
