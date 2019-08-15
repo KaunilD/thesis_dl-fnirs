@@ -464,7 +464,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 10), 1: sample(train_data_list_1, 10)}, count=10000
+        {0: sample(train_data_list_0, 10000), 1: sample(train_data_list_1, 10000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -473,7 +473,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
+        {0: sample(test_data_list_0, 4999), 1: sample(test_data_list_1, 4999)}, count=3000
     )
     print("Test dataset loaded.")
 

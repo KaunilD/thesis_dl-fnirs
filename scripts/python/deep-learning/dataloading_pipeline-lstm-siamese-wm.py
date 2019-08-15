@@ -253,7 +253,7 @@ if __name__ == '__main__':
     ]
     """
 
-    for idx, (cond, dat) in enumerate(zip(conditions[:5], data[:5])):
+    for idx, (cond, dat) in enumerate(zip(conditions, data)):
 
         participant_id = os.path.basename(cond)[0:4]
 
@@ -430,8 +430,8 @@ if __name__ == '__main__':
     np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data_siamese_train", train_pairs)
     """
 
-    NUM_TRAIN_SAMPLES = 200
-    NUM_TEST_SAMPLES = 50
+    NUM_TRAIN_SAMPLES = 20000
+    NUM_TEST_SAMPLES = 5000
 
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
