@@ -336,19 +336,10 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.conv3d1 = nn.Conv3d(in_channels=1, out_channels=2, kernel_size=(1, 1, 1))
-        self.bn1 = nn.BatchNorm3d(2)
-        self.pool1 = nn.AvgPool3d((5, 1, 1))
-        self.relu1 = nn.ReLU()
-        #self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 1, 1), stride=(5, 2, 2))
-        #self.bn2 = nn.BatchNorm3d(30)
-        #self.pool2 = nn.AvgPool3d((1, 1, 1))
+        self.lstm1 = nn.LSTM(55, 256, 10, batch_first=True)
 
 
-        self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 8, 1)
-        self.convLSTM2d2 = ConvLSTM2D((5, 11), 8, 64, 1)
-
-        self.fc1 = nn.Linear(3520, 1760)
+        self.fc1 = nn.Linear(256, 1760)
         self.fc2 = nn.Linear(1760, 880)
         self.fc3 = nn.Linear(880, 440)
         self.fc4 = nn.Linear(440, 220)
@@ -361,39 +352,17 @@ class ConvLSTMNet(nn.Module):
 
     def sub_forward(self, x, hidden_states= None):
 
-        b_idx, ts, n_ch, w, h = x.size()
+        b_idx, ts, rows = x.size()
         if hidden_states:
             self.h1, self.c1 = hidden_states
         else:
-            self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
-            self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
-        #out = x
-        # N, C, D, H, W = 1, 1, 160, 5, 22
-        out = x.permute(0, 2, 1, 3, 4)
+            self.h1, self.c1 = (torch.zeros(10, b_idx, 256).cuda(), torch.zeros(10, b_idx, 256).cuda())
 
-        out = self.conv3d1(out)
-        out = self.bn1(out)
-        out = self.pool1(out)
-        out = self.relu1(out)
+        # B, TS, ROWS = 20, 300, 55
+        out, hidden = self.lstm1(x, (self.h1, self.c1))
+        # stack up lstm outputs
 
-        #print(out.size())
-        # N, D, C, H, W = 1, 1, 160, 5, 22
-        out = out.permute(0, 2, 1, 3, 4)
-
-        for t in range(0, out.size(1)):
-
-            self.h1, self.c1 = self.convLSTM2d1(
-                out[:, t, :, :, :], (self.h1, self.c1)
-            )
-
-            self.h2, self.c2 = self.convLSTM2d2(
-                self.h1, (self.h2, self.c2)
-            )
-
-        out = self.h2.view(self.h2.size(0), -1)
-
-
-        out = self.fc1(out)
+        out = self.fc1(out[ :, -1, :])
         out = self.fc2(out)
         out = self.fc3(out)
         out = self.fc4(out)
@@ -464,7 +433,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 100), 1: sample(train_data_list_1, 100)}, count=10000
+        {0: sample(train_data_list_0, 10000), 1: sample(train_data_list_1, 10000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -473,7 +442,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
+        {0: sample(test_data_list_0, 999), 1: sample(test_data_list_1, 999)}, count=3000
     )
     print("Test dataset loaded.")
 

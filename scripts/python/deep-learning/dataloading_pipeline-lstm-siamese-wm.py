@@ -340,7 +340,9 @@ if __name__ == '__main__':
 
         current_ts = 0
         for idx, task in enumerate(participant_taskdata[participant_id]):
-            task["data"] = cat_tasks[current_ts:current_ts+durations[idx]]
+            current_task = cat_tasks[current_ts:current_ts+durations[idx]]
+            current_task = np.reshape(current_task, (durations[idx], 55))
+            task["data"] = current_task
             current_ts+=durations[idx]
 
     task_data = pad_tasks(task_data)
@@ -353,12 +355,8 @@ if __name__ == '__main__':
 
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
-                    if t["data"][i:i+TIME_CROP_LENGTH].shape[0] == 250:
-                        print("error!!")
                     train_labeled_task_bin[1].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
-                if t["data"][:TIME_CROP_LENGTH].shape[0] == 250:
-                    print("error!!")
                 train_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
     print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1])])
 
@@ -371,12 +369,8 @@ if __name__ == '__main__':
 
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
-                    if t["data"][i:i+TIME_CROP_LENGTH].shape[0] == 250:
-                        print("error!!")
                     val_labeled_task_bin[1].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
-                if t["data"][:TIME_CROP_LENGTH].shape[0] == 250:
-                    print("error!!")
                 val_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1])])
 
@@ -438,7 +432,7 @@ if __name__ == '__main__':
     """
 
     NUM_TRAIN_SAMPLES = 20000
-    NUM_TEST_SAMPLES = 10000
+    NUM_TEST_SAMPLES = 3000
 
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):

@@ -1,1 +1,3 @@
 *.npy
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-0.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-1.pth
