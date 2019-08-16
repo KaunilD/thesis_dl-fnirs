@@ -30,7 +30,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im3 = datum["t3"][0]
             im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[60:70], im2[60:70], im3[60:70], im4[60:70]))
+            self.image_list.append((im1[60:120], im2[60:120], im3[60:120], im4[60:120]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -66,7 +66,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[60:70], im2[60:70]))
+            self.image_list.append((im1[60:120], im2[60:120]))
             self.label_list.append(label)
 
             del im1
@@ -349,46 +349,77 @@ class ContrastiveLoss(torch.nn.Module):
 
         return loss_contrastive
 
-
-
-
 class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.lstm1 = nn.LSTM(55, 64, 10, batch_first=True)
-        self.lstm2 = nn.LSTM(64, 32, 10, batch_first=True)
-        self.relu1 = nn.ReLU()
-        self.drop1 = nn.Dropout(p=0.2)
-        self.sig1 = nn.Sigmoid()
+        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=15, kernel_size=(2, 2, 2))
+        self.bn1 = nn.BatchNorm3d(15)
+        self.pool1 = nn.AvgPool3d((5, 1, 1))
 
-        self.fc1 = nn.Linear(32, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 2)
-        self.fc4 = nn.Tanh()
+        #self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 1, 1), stride=(5, 2, 2))
+        #self.bn2 = nn.BatchNorm3d(30)
+        #self.pool2 = nn.AvgPool3d((1, 1, 1))
+
+
+        self.convLSTM2d1 = ConvLSTM2D((4, 10), 15, 8, 1)
+        self.convLSTM2d2 = ConvLSTM2D((4, 10), 8, 64, 1)
+
+        self.fc1 = nn.Linear(2560, 1760)
+        self.fc2 = nn.Linear(1760, 880)
+        self.fc3 = nn.Linear(880, 440)
+        self.fc4 = nn.Linear(440, 220)
+        self.fc5 = nn.Linear(220, 110)
+        self.fc6 = nn.Linear(110, 55)
+        self.fc7 = nn.Linear(55, 4)
 
 
 
     def sub_forward(self, x, hidden_states= None):
 
-        b_idx, ts, rows = x.size()
-
-
+        b_idx, ts, n_ch, w, h = x.size()
         if hidden_states:
             self.h1, self.c1 = hidden_states
         else:
-            self.h1, self.c1 = (torch.zeros(10, b_idx, 64).cuda(), torch.zeros(10, b_idx, 64).cuda())
-            self.h2, self.c2 = (torch.zeros(10, b_idx, 32).cuda(), torch.zeros(10, b_idx, 32).cuda())
+            self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
+            self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
 
-        # B, TS, ROWS = 20, 300, 55
-        out, (self.h1, self.c1) = self.lstm1(x, (self.h1, self.c1))
-        out = self.relu1(out)
-        out, (self.h2, self.c2) = self.lstm2(out, (self.h2, self.c2))
-        # stack up lstm outputs
-        out = self.drop1(self.relu1(out[:, -1, :]))
+        # N, C, D, H, W = 1, 1, 160, 5, 22
+        out = x.permute(0, 2, 1, 3, 4)
+
+        out = self.conv3d1(out)
+        out = self.pool1(out)
+        out = self.bn1(out)
+
+        """
+        out = self.conv3d2(out)
+        out = self.pool2(out)
+        out = self.bn2(out)
+        """
+
+        #print(out.size())
+        # N, D, C, H, W = 1, 1, 160, 5, 22
+        out = out.permute(0, 2, 1, 3, 4)
+        for t in range(0, out.size(1)):
+
+            self.h1, self.c1 = self.convLSTM2d1(
+                out[:, t, :, :, :], (self.h1, self.c1)
+            )
+
+            self.h2, self.c2 = self.convLSTM2d2(
+                self.h1, (self.h2, self.c2)
+            )
+
+        out = self.h2.view(self.h2.size(0), -1)
+
+
         out = self.fc1(out)
         out = self.fc2(out)
-        out = self.sig1(self.fc3(out))
+        out = self.fc3(out)
+        out = self.fc4(out)
+        out = self.fc5(out)
+        out = self.fc6(out)
+        out = self.fc7(out)
 
         return out
 

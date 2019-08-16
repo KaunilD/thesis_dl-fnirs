@@ -207,14 +207,14 @@ def read_tasks(condition, data):
             dxy_series = dxyData[start:end, :]
 
             # a 100x5x22 list
-            oxy_dxy_series_mat = np.zeros((duration,1, 5, 11))
+            oxy_dxy_series_mat = np.zeros((duration,2, 5, 11))
 
             for ts, (oxy_slice, dxy_slice) in enumerate(zip(oxy_series, dxy_series)):
                 oxy_slice = get_52_5x11_mat(oxy_slice)
                 dxy_slice = get_52_5x11_mat(dxy_slice)
 
                 #oxy_dxy_series_mat[ts] = np.hstack([oxy_slice, dxy_slice])
-                oxy_dxy_series_mat[ts] = np.array(oxy_slice)
+                oxy_dxy_series_mat[ts] = np.array([oxy_slice, dxy_slice])
             tasks.append(
                 {
                     "class": class_,
@@ -341,7 +341,6 @@ if __name__ == '__main__':
         current_ts = 0
         for idx, task in enumerate(participant_taskdata[participant_id]):
             current_task = cat_tasks[current_ts:current_ts+durations[idx]]
-            current_task = np.reshape(current_task, (durations[idx], 55))
             task["data"] = current_task
             current_ts+=durations[idx]
 
