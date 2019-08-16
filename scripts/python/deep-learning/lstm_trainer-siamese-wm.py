@@ -357,15 +357,15 @@ class ConvLSTMNet(nn.Module):
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.AvgPool3d((5, 1, 1))
 
-        #self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 1, 1), stride=(5, 2, 2))
-        #self.bn2 = nn.BatchNorm3d(30)
-        #self.pool2 = nn.AvgPool3d((1, 1, 1))
+        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 2, 2))
+        self.bn2 = nn.BatchNorm3d(30)
+        self.pool2 = nn.AvgPool3d((2, 1, 1))
 
 
-        self.convLSTM2d1 = ConvLSTM2D((4, 10), 15, 8, 1)
-        self.convLSTM2d2 = ConvLSTM2D((4, 10), 8, 64, 1)
+        self.convLSTM2d1 = ConvLSTM2D((3, 9), 30, 128, 1)
+        self.convLSTM2d2 = ConvLSTM2D((3, 9), 128, 64, 1)
 
-        self.fc1 = nn.Linear(2560, 1760)
+        self.fc1 = nn.Linear(1728, 880)
         self.fc2 = nn.Linear(1760, 880)
         self.fc3 = nn.Linear(880, 440)
         self.fc4 = nn.Linear(440, 220)
@@ -391,11 +391,11 @@ class ConvLSTMNet(nn.Module):
         out = self.pool1(out)
         out = self.bn1(out)
 
-        """
+        
         out = self.conv3d2(out)
         out = self.pool2(out)
         out = self.bn2(out)
-        """
+        
 
         #print(out.size())
         # N, D, C, H, W = 1, 1, 160, 5, 22
@@ -414,7 +414,6 @@ class ConvLSTMNet(nn.Module):
 
 
         out = self.fc1(out)
-        out = self.fc2(out)
         out = self.fc3(out)
         out = self.fc4(out)
         out = self.fc5(out)
@@ -442,7 +441,7 @@ if __name__ == '__main__':
     model = ConvLSTMNet()
 
     criterion = ContrastiveLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, verbose=True)
     epochs = 30
     curr_epoch = 0
@@ -474,7 +473,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 100), 1: sample(train_data_list_1, 100)}, count=10000
+        {0: sample(train_data_list_0, 20000), 1: sample(train_data_list_1, 20000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -483,7 +482,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
+        {0: sample(test_data_list_0, 5000), 1: sample(test_data_list_1, 5000)}, count=3000
     )
     print("Test dataset loaded.")
 
