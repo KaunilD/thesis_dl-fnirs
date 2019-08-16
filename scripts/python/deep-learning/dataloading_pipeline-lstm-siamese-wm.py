@@ -253,7 +253,7 @@ if __name__ == '__main__':
     ]
     """
 
-    for idx, (cond, dat) in enumerate(zip(conditions, data)):
+    for idx, (cond, dat) in enumerate(zip(conditions[:5], data[:5])):
 
         participant_id = os.path.basename(cond)[0:4]
 
@@ -347,7 +347,7 @@ if __name__ == '__main__':
 
     task_data = pad_tasks(task_data)
 
-    train_labeled_task_bin = {0:[], 1:[]}
+    train_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in train_ids:
         for t in participant_taskdata[participant_id]:
 
@@ -355,21 +355,21 @@ if __name__ == '__main__':
 
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
-                    train_labeled_task_bin[1].append(t["data"][i:i+TIME_CROP_LENGTH])
+                    train_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
                 train_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
     print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1])])
 
 
 
-    val_labeled_task_bin = {0:[], 1:[]}
+    val_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in val_ids:
         for t in participant_taskdata[participant_id]:
             wm_label = t["wl_label"][0]
 
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
-                    val_labeled_task_bin[1].append(t["data"][i:i+TIME_CROP_LENGTH])
+                    val_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
                 val_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
     print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1])])
@@ -401,7 +401,7 @@ if __name__ == '__main__':
 
     # different pairs
     labels = train_labeled_task_bin.keys()
-    label_pairs = [(0, 1)]
+    label_pairs = [(0, 1), (1, 2), (2, 0)]
 
     for lab1, lab2 in label_pairs:
         for task1 in train_labeled_task_bin[lab1]:
@@ -431,8 +431,8 @@ if __name__ == '__main__':
     np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data_siamese_train", train_pairs)
     """
 
-    NUM_TRAIN_SAMPLES = 20000
-    NUM_TEST_SAMPLES = 3000
+    NUM_TRAIN_SAMPLES = 200
+    NUM_TEST_SAMPLES = 30
 
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
@@ -445,17 +445,18 @@ if __name__ == '__main__':
         np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/1/" + str(idx), data)
     print()
     # ##### validation set
-    val_label_examples = {0:[1], 1:[0]}
+    val_label_examples = {0:[1, 2], 1:[0, 2], 2:[1, 0]}
     val_pairs = []
     for i in val_labeled_task_bin:
         for task in val_labeled_task_bin[i]:
 
             t2 = val_label_examples[i][0]
-
+            t3 = val_label_examples[i][1]
             val_pairs.append({
                 "t1": [task, i],
                 "t2": [random.choice(val_labeled_task_bin[t2]), t2],
-                "t3": [random.choice(val_labeled_task_bin[i]), i]
+                "t3": [random.choice(val_labeled_task_bin[t3]), t3],
+                "t4": [random.choice(val_labeled_task_bin[i]), i]
             })
     print("Saved validation data to disk.")
     np.save("../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val", val_pairs)

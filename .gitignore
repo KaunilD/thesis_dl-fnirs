@@ -1,3 +1,12 @@
 *.npy
 scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-0.pth
 scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-1.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-10.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-2.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-3.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-4.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-5.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-6.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-7.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-8.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/temp/model-siamese-epoch-9.pth

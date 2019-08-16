@@ -28,8 +28,9 @@ class LSTMValDataLoader(torch_data.Dataset):
             im1 = datum["t1"][0]
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
+            im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1, im2, im3))
+            self.image_list.append((im1[60:70], im2[60:70], im3[60:70], im4[60:70]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -65,7 +66,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1, im2))
+            self.image_list.append((im1[60:70], im2[60:70]))
             self.label_list.append(label)
 
             del im1
@@ -235,14 +236,14 @@ def train(model, dataset_loader, epoch, device, optimizer, criterion):
                   (i + 1)*100/len(dataset_loader)
               ), end='\r')
 
-        labels = target.long()
+        labels = target.float()
         input1, input2 = data[0].float(), data[1].float()
         input1, input2, labels = input1.to(device), input2.to(device), labels.to(device)
         optimizer.zero_grad()
         # out1, out2
         outputs = model(input1, input2)
 
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs[0], outputs[1], labels)
 
         loss.backward()
 
@@ -284,7 +285,7 @@ def test(model, dataset_loader, device, criterion):
         print(labels)
         print(correct)
         """
-        loss = criterion(outputs, labels)
+        loss = criterion(outputs[0], outputs[1], labels)
 
         running_loss += loss.item()
         total += labels.size(0)
@@ -307,69 +308,87 @@ def validate(model, dataset_loader, device, criterion):
                   ), end='\r')
 
 
-            input1, input2, input3= data[0].float(), data[1].float(), data[2].float()
-            input1, input2, input3= input1.to(device), input2.to(device), input3.to(device)
-
+            input1, input2, input3, input4 = data[0].float(), data[1].float(), data[2].float(), data[3].float()
+            input1, input2, input3, input4 = input1.to(device), input2.to(device), input3.to(device), input4.to(device)
+            # different
             output1 = model(input1, input2)
             output2 = model(input1, input3)
+            # matching
+            output3 = model(input1, input4)
 
-            _, pred1 = torch.max(output1, 1)
-            _, pred2 = torch.max(output2, 1)
-
-            pred1 = pred1 == 1
-            pred2 = pred2 == 0
-
-            greater_mask = pred1 & pred2
+            output1 = F.pairwise_distance(output1[0], output1[1])
+            output2 = F.pairwise_distance(output2[0], output2[1])
+            output3 = F.pairwise_distance(output3[0], output3[1])
+            pred = int(output3 < output1) & int(output3 < output2)
 
             """
             valid_loss += criterion(outputs, labels).item()
             _, predicted = torch.max(outputs.data, 1)
             """
             total += 1
-            correct += int(greater_mask)
+            correct += int(pred)
 
     accuracy = 100 * correct / total
     return accuracy
+
+class ContrastiveLoss(torch.nn.Module):
+    """
+    Contrastive loss function.
+    Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
+    """
+
+    def __init__(self, margin=2.0):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label):
+        euclidean_distance = F.pairwise_distance(output1, output2, keepdim = True)
+        loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
+                                      (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
+
+
+        return loss_contrastive
+
+
 
 
 class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.lstm1 = nn.LSTM(55, 256, 10, batch_first=True)
+        self.lstm1 = nn.LSTM(55, 64, 10, batch_first=True)
+        self.relu1 = nn.ReLU()
+        self.drop1 = nn.Dropout(p=0.2)
+        self.sig1 = nn.Sigmoid()
 
-
-        self.fc1 = nn.Linear(256, 1760)
-        self.fc2 = nn.Linear(1760, 880)
-        self.fc3 = nn.Linear(880, 440)
-        self.fc4 = nn.Linear(440, 220)
-        self.fc5 = nn.Linear(220, 110)
-        self.fc6 = nn.Linear(110, 55)
-        self.fc7 = nn.Linear(55, 8)
-        self.fc8 = nn.Linear(8, 2)
+        self.fc1 = nn.Linear(64, 128)
+        self.fc2 = nn.Linear(128, 64)
+        self.fc3 = nn.Linear(64, 2)
+        self.fc4 = nn.Tanh()
 
 
 
     def sub_forward(self, x, hidden_states= None):
 
         b_idx, ts, rows = x.size()
+
+        _, indices = torch.max(x, 0)
+        x_one_hot = torch.zeros(x.shape).cuda()
+        x_one_hot[indices]=1
+        x = x_one_hot
+
         if hidden_states:
             self.h1, self.c1 = hidden_states
         else:
-            self.h1, self.c1 = (torch.zeros(10, b_idx, 256).cuda(), torch.zeros(10, b_idx, 256).cuda())
+            self.h1, self.c1 = (torch.zeros(10, b_idx, 64).cuda(), torch.zeros(10, b_idx, 64).cuda())
 
         # B, TS, ROWS = 20, 300, 55
-        out, hidden = self.lstm1(x, (self.h1, self.c1))
+        out, (self.h1, self.c1) = self.lstm1(x_one_hot, (self.h1, self.c1))
         # stack up lstm outputs
-
-        out = self.fc1(out[ :, -1, :])
+        out = self.drop1(self.relu1(out[:, -1, :]))
+        out = self.fc1(out)
         out = self.fc2(out)
-        out = self.fc3(out)
-        out = self.fc4(out)
-        out = self.fc5(out)
-        out = self.fc6(out)
-        out = self.fc7(out)
-        out = self.fc8(out)
+        out = self.sig1(self.fc3(out))
 
         return out
 
@@ -377,16 +396,7 @@ class ConvLSTMNet(nn.Module):
         out1 = self.sub_forward(x1)
         out2 = self.sub_forward(x2)
 
-
-        o_sum = out1 + out2
-        o_prod = out1 * out2
-        o_abs = torch.abs(out1 - out2)
-        o_sq = torch.pow(o_abs, 2)
-
-        out = torch.cat((o_sum, o_prod, o_abs, o_sq))
-        out = out.view(-1, 8)
-        out = self.fc8(out)
-        return out
+        return out1, out2
 
 
 if __name__ == '__main__':
@@ -400,7 +410,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ConvLSTMNet()
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = ContrastiveLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, verbose=True)
     epochs = 30
@@ -433,7 +443,7 @@ if __name__ == '__main__':
 
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 10000), 1: sample(train_data_list_1, 10000)}, count=10000
+        {0: sample(train_data_list_0, 100), 1: sample(train_data_list_1, 100)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -442,7 +452,7 @@ if __name__ == '__main__':
 
 
     test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 999), 1: sample(test_data_list_1, 999)}, count=3000
+        {0: sample(test_data_list_0, 9), 1: sample(test_data_list_1, 9)}, count=3000
     )
     print("Test dataset loaded.")
 
@@ -485,12 +495,12 @@ if __name__ == '__main__':
             curr_epoch, device, optimizer, criterion
         )
 
-
+        """
         test_running_loss, test_accuracy = test(
             model, test_loader,
             device, criterion
         )
-
+        """
         val_accuracy = validate(
             model, val_loader,
             device, criterion
@@ -501,11 +511,11 @@ if __name__ == '__main__':
         )
 
         test_acc_history.append(
-            test_accuracy
+            0
         )
 
         test_loss_history.append(
-            test_running_loss
+            0
         )
 
         val_acc_history.append(
@@ -526,8 +536,8 @@ if __name__ == '__main__':
         print('{}\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t'.format(
             curr_epoch,
             train_running_loss,
-            test_running_loss,
-            test_accuracy,
+            0,
+            0,
             val_accuracy
         ))
         curr_epoch+=1
