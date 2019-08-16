@@ -357,11 +357,12 @@ class ConvLSTMNet(nn.Module):
         super(ConvLSTMNet, self).__init__()
 
         self.lstm1 = nn.LSTM(55, 64, 10, batch_first=True)
+        self.lstm2 = nn.LSTM(64, 32, 10, batch_first=True)
         self.relu1 = nn.ReLU()
         self.drop1 = nn.Dropout(p=0.2)
         self.sig1 = nn.Sigmoid()
 
-        self.fc1 = nn.Linear(64, 128)
+        self.fc1 = nn.Linear(32, 128)
         self.fc2 = nn.Linear(128, 64)
         self.fc3 = nn.Linear(64, 2)
         self.fc4 = nn.Tanh()
@@ -372,18 +373,17 @@ class ConvLSTMNet(nn.Module):
 
         b_idx, ts, rows = x.size()
 
-        _, indices = torch.max(x, 0)
-        x_one_hot = torch.zeros(x.shape).cuda()
-        x_one_hot[indices]=1
-        x = x_one_hot
 
         if hidden_states:
             self.h1, self.c1 = hidden_states
         else:
             self.h1, self.c1 = (torch.zeros(10, b_idx, 64).cuda(), torch.zeros(10, b_idx, 64).cuda())
+            self.h2, self.c2 = (torch.zeros(10, b_idx, 32).cuda(), torch.zeros(10, b_idx, 32).cuda())
 
         # B, TS, ROWS = 20, 300, 55
-        out, (self.h1, self.c1) = self.lstm1(x_one_hot, (self.h1, self.c1))
+        out, (self.h1, self.c1) = self.lstm1(x, (self.h1, self.c1))
+        out = self.relu1(out)
+        out, (self.h2, self.c2) = self.lstm2(out, (self.h2, self.c2))
         # stack up lstm outputs
         out = self.drop1(self.relu1(out[:, -1, :]))
         out = self.fc1(out)
