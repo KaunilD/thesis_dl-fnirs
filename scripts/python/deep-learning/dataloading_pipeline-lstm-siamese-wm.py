@@ -236,22 +236,21 @@ def pad_tasks(tasks):
         t["data"] = padded_task
     return tasks
 
+def k_largest_index_argpartition_v1(a, k):
+    idx = np.argpartition(-a.ravel(),k)[:k]
+    return np.column_stack(np.unravel_index(idx, a.shape))
 
 if __name__ == '__main__':
+    """
+        READ DATA INTO PYTHON CONTAINERS
+        default3 labels: [ wm, v, a ]
+    """
 
     conditions = sorted(glob.glob('../../../data/multilabel/mats/mindfulness/*.csv'))
     data = sorted(glob.glob('../../../data/multilabel/mats/mindfulness/*.mat'))
 
     task_data = []
     time_series_length = 10
-    """
-    default3 labels
-    [
-        wm,
-        v,
-        a
-    ]
-    """
 
     for idx, (cond, dat) in enumerate(zip(conditions, data)):
 
@@ -269,8 +268,10 @@ if __name__ == '__main__':
             task_data[-1]["wl_label"] = return_label(task_data[-1]["class"])
         task_data = collapse_tasks(task_data, min_dur=time_series_length)
 
-    #### GET wm, vl, al (off, low, high) label counts and counts for each type of task
-
+    """
+        GET wm, vl, al (off, low, high) label counts
+        and counts for each type of task
+    """
     labels_bin = {"wm":{0:0, 1:0, 2:0}, "vl":{0:0, 1:0, 2:0}, "al":{0:0, 1:0, 2:0}}
     task_cond_bin = {i:{"ts":0, "cnt":0} for i in cog_load_label_dict}
     for t in task_data:
@@ -283,14 +284,31 @@ if __name__ == '__main__':
         labels_bin["vl"][label[1]]+=1
         labels_bin["al"][label[2]]+=1
 
-    print(task_cond_bin, labels_bin)
-
+    """
+        BIN TASKS INTO PARTICIPANT_SESSION BUCKETS
+    """
     participant_taskdata = {}
 
-
-
     invalids = [
-'8210_s2','2003_s1','8208_s2','8203_s1','8204_s1','8212_s1','2014_s2','2006_s2','8208_s2','8206_s2','8203_s1','8213_s1','8204_s1','2004_s1','8201_s1','8215_s1','8219_s1','8211_s1','2001_s1','2006_s1','2006_s1','2006_s2','8210_s1','8210_s2','8210_s2','8218_s1','2017_s1','2019_s1','2003_s1','8209_s1','8208_s1','8208_s1','8208_s2','2012_s1','8220_s1','2007_s1','8205_s2','2011_s1','2011_s2','2015_s2','8204_s2','2013_s1','2013_s1','2013_s2','8212_s2','2002_s2','2004_s1','2004_s1','2014_s1','2014_s1','2014_s2','8215_s1','2001_s1','2006_s1','2006_s2','8210_s2','2017_s1','2019_s1','8209_s2','8208_s2','8208_s2','2012_s1','2012_s2','8216_s2','8216_s2','8206_s2','8206_s2','8220_s1','8220_s1','2007_s1','2007_s1','8203_s1','8203_s1','2011_s1','8213_s1','8213_s1','2015_s1','2015_s1','2015_s2','8204_s1','8204_s2','2013_s1','2013_s2','8212_s1','2002_s1','2002_s2','2004_s1','2004_s1','2014_s1','8201_s1','8201_s1','8219_s1','8219_s1','8211_s1','8211_s2','2001_s1','2001_s1','8221_s2','2006_s1','8210_s1','8210_s1','8210_s2','8218_s1','2017_s1','2019_s1','2019_s1','2003_s1','8209_s1','8209_s1','8209_s2','8208_s1','8208_s1','8208_s2','8208_s2','2012_s1','2012_s1','2012_s2','2012_s2','8216_s1','8216_s1','8216_s2','8216_s2','8206_s1','8220_s1','2007_s1','2007_s1','8205_s2','2015_s1','2013_s2','8219_s1','2006_s2','8210_s2'
+        '8210_s2','2003_s1','8208_s2','8203_s1','8204_s1','8212_s1','2014_s2',
+        '2006_s2','8208_s2','8206_s2','8203_s1','8213_s1','8204_s1','2004_s1',
+        '8201_s1','8215_s1','8219_s1','8211_s1','2001_s1','2006_s1','2006_s1',
+        '2006_s2','8210_s1','8210_s2','8210_s2','8218_s1','2017_s1','2019_s1',
+        '2003_s1','8209_s1','8208_s1','8208_s1','8208_s2','2012_s1','8220_s1',
+        '2007_s1','8205_s2','2011_s1','2011_s2','2015_s2','8204_s2','2013_s1',
+        '2013_s1','2013_s2','8212_s2','2002_s2','2004_s1','2004_s1','2014_s1',
+        '2014_s1','2014_s2','8215_s1','2001_s1','2006_s1','2006_s2','8210_s2',
+        '2017_s1','2019_s1','8209_s2','8208_s2','8208_s2','2012_s1','2012_s2',
+        '8216_s2','8216_s2','8206_s2','8206_s2','8220_s1','8220_s1','2007_s1',
+        '2007_s1','8203_s1','8203_s1','2011_s1','8213_s1','8213_s1','2015_s1',
+        '2015_s1','2015_s2','8204_s1','8204_s2','2013_s1','2013_s2','8212_s1',
+        '2002_s1','2002_s2','2004_s1','2004_s1','2014_s1','8201_s1','8201_s1',
+        '8219_s1','8219_s1','8211_s1','8211_s2','2001_s1','2001_s1','8221_s2',
+        '2006_s1','8210_s1','8210_s1','8210_s2','8218_s1','2017_s1','2019_s1',
+        '2019_s1','2003_s1','8209_s1','8209_s1','8209_s2','8208_s1','8208_s1',
+        '8208_s2','8208_s2','2012_s1','2012_s1','2012_s2','2012_s2','8216_s1',
+        '8216_s1','8216_s2','8216_s2','8206_s1','8220_s1','2007_s1','2007_s1',
+        '8205_s2','2015_s1','2013_s2','8219_s1','2006_s2','8210_s2'
     ]
 
 
@@ -303,19 +321,20 @@ if __name__ == '__main__':
 
 
     participant_ids = list(participant_taskdata.keys())
-    print(participant_ids)
+    print("Valid Participants: ", participant_ids)
 
-
-
-    train_ids = participant_ids[:int(0.8*len(participant_ids))]
-    val_ids = participant_ids[int(0.8*len(participant_ids)):]
-    print(len(train_ids))
-    print(len(val_ids))
-
-    TIME_CROP_LENGTH = 300
-    # #### Get total rows in wl = wm for each off, low, high
     """
-    NORMALIZING PARTICIPANTS
+        SPLIT PARTICIPANTS INTO TRAIN AND TEST
+    """
+    train_ids = participant_ids
+    val_ids = participant_ids[int(0.8*len(participant_ids)):]
+    print(
+        "Train Participants: {}, Test Participants: {}".format(len(train_ids), len(val_ids))
+    )
+
+
+    """
+        NORMALIZING PARTICIPANTS
     """
     for participant_id in participant_taskdata:
         durations = []
@@ -340,10 +359,37 @@ if __name__ == '__main__':
             current_task = cat_tasks[current_ts:current_ts+durations[idx]]
             task["data"] = current_task
             current_ts+=durations[idx]
+    """
+        SELECT TOP K SIGNAL SOURCES
+        FROM THE 5x11 ARRAY
+    K = 5
+    for participant_id in participant_taskdata:
+        for idx, task in enumerate(participant_taskdata[participant_id]):
+            for t_idx, t_slice in enumerate(task["data"]):
+                oxy_slice, dxy_slice = t_slice
+                oxy_mask, dxy_mask = np.zeros(oxy_slice.shape), np.zeros(dxy_slice.shape)
+
+                oxy_top_k = k_largest_index_argpartition_v1(oxy_slice, K)
+                dxy_top_k = k_largest_index_argpartition_v1(dxy_slice, K)
+
+                for i in range(K):
+                    oxy_mask[oxy_top_k[i][0]][oxy_top_k[i][1]] = oxy_slice[oxy_top_k[i][0]][oxy_top_k[i][1]]
+                    dxy_mask[dxy_top_k[i][0]][dxy_top_k[i][1]] = dxy_slice[dxy_top_k[i][0]][dxy_top_k[i][1]]
+                t_slice[0] = oxy_mask
+                t_slice[1] = dxy_mask
+    """
+    
 
     task_data = pad_tasks(task_data)
 
+    """
+        RANDOM TIME CROPPING OF TASKS
+        AND
+        BINNING TASKS INTO WORKLOAD BUCKETS
+    """
+    TIME_CROP_LENGTH = 300
     train_labeled_task_bin = {0:[], 1:[], 2:[]}
+
     for participant_id in train_ids:
         for t in participant_taskdata[participant_id]:
 
@@ -354,8 +400,6 @@ if __name__ == '__main__':
                     train_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
                 train_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
-    print( [len(train_labeled_task_bin[0]), len(train_labeled_task_bin[1])])
-
 
 
     val_labeled_task_bin = {0:[], 1:[], 2:[]}
@@ -368,9 +412,10 @@ if __name__ == '__main__':
                     val_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
                 val_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
-    print( [len(val_labeled_task_bin[0]), len(val_labeled_task_bin[1])])
 
     train_pairs = {0:[], 1:[]}
+    for i in train_labeled_task_bin:
+        print(len(train_labeled_task_bin[i]))
 
     # matching pairs
     for i in train_labeled_task_bin:
@@ -414,22 +459,11 @@ if __name__ == '__main__':
     shuffle(train_pairs[1])
 
     """
-        write all data to disk as is
-    """
-
-    """
-    data_list = []
-    for idx, data in enumerate(task_data):
-        data_list.append(data)
-    np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data", data_list)
-    """
-    """
-    np.save("C://Users//dhruv//Development//git//thesis_dl-fnirs//data//multilabel//all//mindfulness\\data_siamese_train", train_pairs)
+        WRITE TRAIN DATA TO DISK
     """
 
     NUM_TRAIN_SAMPLES = 20000
     NUM_TEST_SAMPLES = 10000
-
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
         print("Saved matching pairs {} of {} to disk.".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
@@ -440,7 +474,11 @@ if __name__ == '__main__':
         print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
         np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/1/" + str(idx), data)
     print()
-    # ##### validation set
+    """
+        WRITE VALIDATION DATA TO DISK
+    """
+    for i in val_labeled_task_bin:
+        print(len(val_labeled_task_bin[i]))
     val_label_examples = {0:[1, 2], 1:[0, 2], 2:[1, 0]}
     val_pairs = []
     for i in val_labeled_task_bin:
@@ -456,6 +494,10 @@ if __name__ == '__main__':
             })
     print("Saved validation data to disk.")
     np.save("../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val", val_pairs)
+
+    """
+        WRITE TEST DATA TO DISK
+    """
 
     # ##### siamese pairs validation
     siamese_pairs_val = {0:[], 1:[]}
@@ -495,21 +537,18 @@ if __name__ == '__main__':
                     1
                 ))
 
-
-
-    print(len(siamese_pairs_val[0]), len(siamese_pairs_val[1]))
-
     shuffle(siamese_pairs_val[0])
     shuffle(siamese_pairs_val[1])
+    """
+        # save matching
+        for idx, data in enumerate(siamese_pairs_val[0][0:NUM_TEST_SAMPLES]):
+            print("Saved matching pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
+            np.save("../../../data/multilabel/all/mindfulness/siamese/wm/test/0/" + str(idx), data)
+        print()
 
-    # save matching
-    for idx, data in enumerate(siamese_pairs_val[0][0:NUM_TEST_SAMPLES]):
-        print("Saved matching pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
-        np.save("../../../data/multilabel/all/mindfulness/siamese/wm/test/0/" + str(idx), data)
-    print()
-
-    # save different
-    for idx, data in enumerate(siamese_pairs_val[1][0:NUM_TEST_SAMPLES]):
-        print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
-        np.save("../../../data/multilabel/all/mindfulness/siamese/wm/test/1/" + str(idx), data)
-    print()
+        # save different
+        for idx, data in enumerate(siamese_pairs_val[1][0:NUM_TEST_SAMPLES]):
+            print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TEST_SAMPLES), end='\r')
+            np.save("../../../data/multilabel/all/mindfulness/siamese/wm/test/1/" + str(idx), data)
+        print()
+    """

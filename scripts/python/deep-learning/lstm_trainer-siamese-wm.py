@@ -30,7 +30,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im3 = datum["t3"][0]
             im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[60:120], im2[60:120], im3[60:120], im4[60:120]))
+            self.image_list.append((im1[:80], im2[:80], im3[:80], im4[:80]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -66,7 +66,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[60:120], im2[60:120]))
+            self.image_list.append((im1[:80], im2[:80]))
             self.label_list.append(label)
 
             del im1
@@ -279,12 +279,6 @@ def test(model, dataset_loader, device, criterion):
         _, pred = torch.max(outputs, 1)
         correct += (pred == labels).sum()
 
-        """
-        print(outputs)
-        print(pred)
-        print(labels)
-        print(correct)
-        """
         loss = criterion(outputs[0], outputs[1], labels)
 
         running_loss += loss.item()
@@ -319,12 +313,9 @@ def validate(model, dataset_loader, device, criterion):
             output1 = F.pairwise_distance(output1[0], output1[1])
             output2 = F.pairwise_distance(output2[0], output2[1])
             output3 = F.pairwise_distance(output3[0], output3[1])
-            pred = int(output3 < output1) & int(output3 < output2)
+            #print(output1, output2, output3)
+            pred = int(output3 > output1) & int(output3 > output2)
 
-            """
-            valid_loss += criterion(outputs, labels).item()
-            _, predicted = torch.max(outputs.data, 1)
-            """
             total += 1
             correct += int(pred)
 
@@ -337,7 +328,7 @@ class ContrastiveLoss(torch.nn.Module):
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=2.0):
+    def __init__(self, margin=0.05):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
@@ -355,23 +346,22 @@ class ConvLSTMNet(nn.Module):
 
         self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=15, kernel_size=(2, 2, 2))
         self.bn1 = nn.BatchNorm3d(15)
-        self.pool1 = nn.AvgPool3d((5, 1, 1))
+        self.pool1 = nn.MaxPool3d((5, 1, 1))
 
-        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(5, 2, 2))
+        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(2, 2, 2))
         self.bn2 = nn.BatchNorm3d(30)
-        self.pool2 = nn.AvgPool3d((2, 1, 1))
+        self.pool2 = nn.MaxPool3d((2, 1, 1))
 
+        self.nl1 = nn.Tanh()
 
         self.convLSTM2d1 = ConvLSTM2D((3, 9), 30, 128, 1)
         self.convLSTM2d2 = ConvLSTM2D((3, 9), 128, 64, 1)
+        self.convLSTM2d3 = ConvLSTM2D((3, 9), 64, 32, 1)
 
-        self.fc1 = nn.Linear(1728, 880)
-        self.fc2 = nn.Linear(1760, 880)
-        self.fc3 = nn.Linear(880, 440)
-        self.fc4 = nn.Linear(440, 220)
-        self.fc5 = nn.Linear(220, 110)
-        self.fc6 = nn.Linear(110, 55)
-        self.fc7 = nn.Linear(55, 4)
+        self.fc2 = nn.Linear(864, 440)
+        self.fc3 = nn.Linear(440, 220)
+        self.fc4 = nn.Linear(220, 110)
+        self.fc5 = nn.Linear(110, 10)
 
 
 
@@ -383,6 +373,7 @@ class ConvLSTMNet(nn.Module):
         else:
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
             self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
+            self.h3, self.c3 = self.convLSTM2d3.init_hidden(batch_size=b_idx)
 
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
@@ -391,11 +382,13 @@ class ConvLSTMNet(nn.Module):
         out = self.pool1(out)
         out = self.bn1(out)
 
-        
+
         out = self.conv3d2(out)
         out = self.pool2(out)
         out = self.bn2(out)
-        
+
+        out = self.nl1(out)
+
 
         #print(out.size())
         # N, D, C, H, W = 1, 1, 160, 5, 22
@@ -410,15 +403,17 @@ class ConvLSTMNet(nn.Module):
                 self.h1, (self.h2, self.c2)
             )
 
-        out = self.h2.view(self.h2.size(0), -1)
+            self.h3, self.c3 = self.convLSTM2d3(
+                self.h2, (self.h3, self.c3)
+            )
 
 
-        out = self.fc1(out)
+        out = self.h3.view(self.h3.size(0), -1)
+
+        out = self.fc2(out)
         out = self.fc3(out)
         out = self.fc4(out)
         out = self.fc5(out)
-        out = self.fc6(out)
-        out = self.fc7(out)
 
         return out
 
@@ -428,6 +423,29 @@ class ConvLSTMNet(nn.Module):
 
         return out1, out2
 
+def load_model(best_model, learning_rate, device):
+    checkpoint = torch.load(
+        '{}-{}.{}'.format(
+            MODEL_PATH_PREFIX,str(best_model), MODEL_PATH_EXT
+        )
+    )
+
+    model = ConvLSTMNet()
+    model.load_state_dict(checkpoint['model'])
+    model.to(device)
+
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if torch.is_tensor(v):
+                state[k] = v.to(device)
+    return model, optimizer
+
+def restart_training(best_model, learning_rate, device):
+    model, optimizer = load_model(best_model, learning_rate, device)
+    return model, optimizer
 
 if __name__ == '__main__':
 
@@ -436,15 +454,16 @@ if __name__ == '__main__':
     print("torch.cuda.device('cuda')   =", torch.cuda.device('cuda'))
     print("torch.cuda.current_device() =", torch.cuda.current_device())
 
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ConvLSTMNet()
 
-    criterion = ContrastiveLoss()
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5, verbose=True)
-    epochs = 30
+    epochs = 100
     curr_epoch = 0
+    patience = 3
+    lr = 0.0005
+
+    criterion = ContrastiveLoss()
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
 
     model.to(device)
     criterion.to(device)
@@ -452,43 +471,18 @@ if __name__ == '__main__':
     train_loss_history, test_loss_history = [], []
     test_acc_history, val_acc_history = [], []
 
-
-    best_accuracy = 0.0
-    best_model = -1
-
     MODEL_PATH_PREFIX = './experiments/convlstm-siamese/temp/model-siamese-epoch'
     MODEL_PATH_EXT = 'pth'
 
     train_data_list_0 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/0/*.npy')
     train_data_list_1 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/1/*.npy')
 
-    test_data_list_0 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/test/0/*.npy')
-    test_data_list_1 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/test/1/*.npy')
-
-
     val_data_list = np.load('../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy')
 
-
-    # In[13]:
-
-
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 20000), 1: sample(train_data_list_1, 20000)}, count=10000
+        {0: sample(train_data_list_0, 10000), 1: sample(train_data_list_1, 10000)}, count=10000
     )
     print("Train dataset loaded.")
-
-
-    # In[14]:
-
-
-    test_dataloader = LSTMTrainDataLoader(
-        {0: sample(test_data_list_0, 5000), 1: sample(test_data_list_1, 5000)}, count=3000
-    )
-    print("Test dataset loaded.")
-
-
-    # In[15]:
-
 
     val_dataloader = LSTMValDataLoader(
         val_data_list
@@ -501,21 +495,17 @@ if __name__ == '__main__':
         batch_size=256, shuffle=True, num_workers=0
     )
 
-    test_loader = torch_data.DataLoader(
-        test_dataloader,
-        batch_size=128, shuffle=False, num_workers=0
-    )
-
     val_loader = torch_data.DataLoader(
         val_dataloader,
         batch_size=1, shuffle=False, num_workers=0
     )
 
-
     is_best = True
     best_score = 0
     best_epoch = 0
-
+    best_accuracy = 0.0
+    best_model = -1
+    reset_count = 0
 
     print("Epoch\tTrain Loss\tTest Loss\tTest Accuracy\tValidation Accuracy")
     while curr_epoch <= epochs:
@@ -525,17 +515,11 @@ if __name__ == '__main__':
             curr_epoch, device, optimizer, criterion
         )
 
-        """
-        test_running_loss, test_accuracy = test(
-            model, test_loader,
-            device, criterion
-        )
-        """
         val_accuracy = validate(
             model, val_loader,
             device, criterion
         )
-        # record all the models that we have had so far.
+
         train_loss_history.append(
             train_running_loss
         )
@@ -551,7 +535,6 @@ if __name__ == '__main__':
         val_acc_history.append(
             val_accuracy
         )
-        # write model to disk.
 
         state = {
             'model': model.state_dict(),
@@ -560,8 +543,25 @@ if __name__ == '__main__':
 
         torch.save(
             state,
-            MODEL_PATH_PREFIX + '-{}.'.format(curr_epoch) + MODEL_PATH_EXT
+            '{}-{}.{}'.format(MODEL_PATH_PREFIX, curr_epoch, MODEL_PATH_EXT)
         )
+
+        if val_accuracy > best_accuracy:
+            best_accuracy = val_accuracy
+            best_model = curr_epoch
+            reset_count = 0
+        else:
+            reset_count+=1
+
+        if reset_count == patience:
+            reset_count = 0
+            curr_epoch = best_model
+            if lr/2 < 0.0001:
+                lr = 0.0005
+            else:
+                lr/=2
+            model, optimizer = restart_training(best_model, lr, device)
+
 
         print('{}\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t'.format(
             curr_epoch,
