@@ -326,7 +326,7 @@ if __name__ == '__main__':
     """
         SPLIT PARTICIPANTS INTO TRAIN AND TEST
     """
-    train_ids = participant_ids
+    train_ids = participant_ids[:int(.8*len(participant_ids))]
     val_ids = participant_ids[int(0.8*len(participant_ids)):]
     print(
         "Train Participants: {}, Test Participants: {}".format(len(train_ids), len(val_ids))
@@ -394,24 +394,26 @@ if __name__ == '__main__':
         for t in participant_taskdata[participant_id]:
 
             wm_label = t["wl_label"][0]
-
+            """
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
                     train_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
-                train_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
+            """
+            train_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
 
 
     val_labeled_task_bin = {0:[], 1:[], 2:[]}
     for participant_id in val_ids:
         for t in participant_taskdata[participant_id]:
             wm_label = t["wl_label"][0]
-
+            """
             if wm_label in [1, 2]:
                 for i in range(0, 60, 20):
                     val_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
             else:
-                val_labeled_task_bin[0].append(t["data"][:TIME_CROP_LENGTH])
+            """
+            val_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
 
     train_pairs = {0:[], 1:[]}
     for i in train_labeled_task_bin:
@@ -462,8 +464,8 @@ if __name__ == '__main__':
         WRITE TRAIN DATA TO DISK
     """
 
-    NUM_TRAIN_SAMPLES = 20000
-    NUM_TEST_SAMPLES = 10000
+    NUM_TRAIN_SAMPLES = 60000
+    NUM_TEST_SAMPLES = 30000
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
         print("Saved matching pairs {} of {} to disk.".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')

@@ -14,6 +14,10 @@ import torch.nn.functional as F
 
 from random import shuffle, sample
 
+MODEL_PATH_PREFIX = './experiments/convlstm-siamese/temp/model-siamese-epoch'
+MODEL_PATH_EXT = 'pth'
+
+
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
         self.data_list = data_list
@@ -30,7 +34,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im3 = datum["t3"][0]
             im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[:80], im2[:80], im3[:80], im4[:80]))
+            self.image_list.append((im1[60:200], im2[60:200], im3[60:200], im4[60:200]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -66,7 +70,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[:80], im2[:80]))
+            self.image_list.append((im1[60:200], im2[60:200]))
             self.label_list.append(label)
 
             del im1
@@ -328,7 +332,7 @@ class ContrastiveLoss(torch.nn.Module):
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=0.05):
+    def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
@@ -348,20 +352,20 @@ class ConvLSTMNet(nn.Module):
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.MaxPool3d((5, 1, 1))
 
-        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(2, 2, 2))
+        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(1, 1, 1))
         self.bn2 = nn.BatchNorm3d(30)
         self.pool2 = nn.MaxPool3d((2, 1, 1))
 
         self.nl1 = nn.Tanh()
 
-        self.convLSTM2d1 = ConvLSTM2D((3, 9), 30, 128, 1)
-        self.convLSTM2d2 = ConvLSTM2D((3, 9), 128, 64, 1)
-        self.convLSTM2d3 = ConvLSTM2D((3, 9), 64, 32, 1)
+        self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 64, 1)
+        self.convLSTM2d2 = ConvLSTM2D((5, 11), 2, 64, 1)
+        self.convLSTM2d3 = ConvLSTM2D((5, 11), 64, 32, 1)
 
-        self.fc2 = nn.Linear(864, 440)
-        self.fc3 = nn.Linear(440, 220)
-        self.fc4 = nn.Linear(220, 110)
-        self.fc5 = nn.Linear(110, 10)
+        self.fc2 = nn.Linear(7040, 3400)
+        self.fc3 = nn.Linear(3400, 1000)
+        self.fc4 = nn.Linear(1000, 500)
+        self.fc5 = nn.Linear(500, 50)
 
 
 
@@ -374,25 +378,26 @@ class ConvLSTMNet(nn.Module):
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
             self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
             self.h3, self.c3 = self.convLSTM2d3.init_hidden(batch_size=b_idx)
-
+        out = x
+        """
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
 
         out = self.conv3d1(out)
         out = self.pool1(out)
-        out = self.bn1(out)
+        #out = self.bn1(out)
 
 
         out = self.conv3d2(out)
-        out = self.pool2(out)
-        out = self.bn2(out)
+        #out = self.pool2(out)
+        #out = self.bn2(out)
 
         out = self.nl1(out)
-
 
         #print(out.size())
         # N, D, C, H, W = 1, 1, 160, 5, 22
         out = out.permute(0, 2, 1, 3, 4)
+        """
         for t in range(0, out.size(1)):
 
             self.h1, self.c1 = self.convLSTM2d1(
@@ -400,15 +405,15 @@ class ConvLSTMNet(nn.Module):
             )
 
             self.h2, self.c2 = self.convLSTM2d2(
-                self.h1, (self.h2, self.c2)
+                out[:, out.size(1)-t-1, :, :, :], (self.h2, self.c2)
             )
-
+            """
             self.h3, self.c3 = self.convLSTM2d3(
                 self.h2, (self.h3, self.c3)
             )
-
-
-        out = self.h3.view(self.h3.size(0), -1)
+            """
+        out = torch.cat((self.h1, self.h2), 1)
+        out = out.view(out.size(0), -1)
 
         out = self.fc2(out)
         out = self.fc3(out)
@@ -460,19 +465,17 @@ if __name__ == '__main__':
     epochs = 100
     curr_epoch = 0
     patience = 3
-    lr = 0.0005
+    lr = 0.0001
+    margin = 0.5
 
-    criterion = ContrastiveLoss()
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=lr)
+    criterion = ContrastiveLoss(margin=margin)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     model.to(device)
     criterion.to(device)
 
     train_loss_history, test_loss_history = [], []
     test_acc_history, val_acc_history = [], []
-
-    MODEL_PATH_PREFIX = './experiments/convlstm-siamese/temp/model-siamese-epoch'
-    MODEL_PATH_EXT = 'pth'
 
     train_data_list_0 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/0/*.npy')
     train_data_list_1 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/1/*.npy')
@@ -492,7 +495,7 @@ if __name__ == '__main__':
 
     train_loader = torch_data.DataLoader(
         train_dataloader,
-        batch_size=256, shuffle=True, num_workers=0
+        batch_size=64, shuffle=True, num_workers=0
     )
 
     val_loader = torch_data.DataLoader(
@@ -558,9 +561,12 @@ if __name__ == '__main__':
             curr_epoch = best_model
             if lr/2 < 0.0001:
                 lr = 0.0005
+                margin = 2.0
             else:
                 lr/=2
+                margin/=2
             model, optimizer = restart_training(best_model, lr, device)
+            #criterion = ContrastiveLoss(margin=margin)
 
 
         print('{}\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t'.format(
@@ -571,3 +577,4 @@ if __name__ == '__main__':
             val_accuracy
         ))
         curr_epoch+=1
+
