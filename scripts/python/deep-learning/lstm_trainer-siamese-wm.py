@@ -32,9 +32,8 @@ class LSTMValDataLoader(torch_data.Dataset):
             im1 = datum["t1"][0]
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
-            im4 = datum["t4"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[60:200], im2[60:200], im3[60:200], im4[60:200]))
+            self.image_list.append((im1[0:60], im2[0:60], im3[0:60]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -70,7 +69,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[60:200], im2[60:200]))
+            self.image_list.append((im1[0:60], im2[0:60]))
             self.label_list.append(label)
 
             del im1
@@ -306,19 +305,18 @@ def validate(model, dataset_loader, device, criterion):
                   ), end='\r')
 
 
-            input1, input2, input3, input4 = data[0].float(), data[1].float(), data[2].float(), data[3].float()
-            input1, input2, input3, input4 = input1.to(device), input2.to(device), input3.to(device), input4.to(device)
+            input1, input2, input3 = data[0].float(), data[1].float(), data[2].float()
+            input1, input2, input3 = input1.to(device), input2.to(device), input3.to(device)
             # different
             output1 = model(input1, input2)
-            output2 = model(input1, input3)
             # matching
-            output3 = model(input1, input4)
+            output2 = model(input1, input3)
 
             output1 = F.pairwise_distance(output1[0], output1[1])
             output2 = F.pairwise_distance(output2[0], output2[1])
-            output3 = F.pairwise_distance(output3[0], output3[1])
+
             #print(output1, output2, output3)
-            pred = int(output3 > output1) & int(output3 > output2)
+            pred = int(output2 <= output1)
 
             total += 1
             correct += int(pred)
@@ -348,7 +346,7 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=15, kernel_size=(2, 2, 2))
+        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=2, kernel_size=(1, 2, 2))
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.MaxPool3d((5, 1, 1))
 
@@ -358,11 +356,10 @@ class ConvLSTMNet(nn.Module):
 
         self.nl1 = nn.Tanh()
 
-        self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 64, 1)
-        self.convLSTM2d2 = ConvLSTM2D((5, 11), 2, 64, 1)
-        self.convLSTM2d3 = ConvLSTM2D((5, 11), 64, 32, 1)
+        self.convLSTM2d1 = ConvLSTM2D((4, 10), 2, 64, 1)
+        self.convLSTM2d2 = ConvLSTM2D((4, 10), 2, 64, 1)
 
-        self.fc2 = nn.Linear(7040, 3400)
+        self.fc2 = nn.Linear(5120, 3400)
         self.fc3 = nn.Linear(3400, 1000)
         self.fc4 = nn.Linear(1000, 500)
         self.fc5 = nn.Linear(500, 50)
@@ -377,14 +374,16 @@ class ConvLSTMNet(nn.Module):
         else:
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
             self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
-            self.h3, self.c3 = self.convLSTM2d3.init_hidden(batch_size=b_idx)
         out = x
-        """
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
-
         out = self.conv3d1(out)
         out = self.pool1(out)
+
+        # N, D, C, H, W = 1, 1, 160, 5, 22
+        out = out.permute(0, 2, 1, 3, 4)
+        """
+
         #out = self.bn1(out)
 
 
@@ -395,8 +394,6 @@ class ConvLSTMNet(nn.Module):
         out = self.nl1(out)
 
         #print(out.size())
-        # N, D, C, H, W = 1, 1, 160, 5, 22
-        out = out.permute(0, 2, 1, 3, 4)
         """
         for t in range(0, out.size(1)):
 
@@ -465,7 +462,7 @@ if __name__ == '__main__':
     epochs = 100
     curr_epoch = 0
     patience = 3
-    lr = 0.0001
+    lr = 0.001
     margin = 0.5
 
     criterion = ContrastiveLoss(margin=margin)
@@ -483,7 +480,7 @@ if __name__ == '__main__':
     val_data_list = np.load('../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy')
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 10000), 1: sample(train_data_list_1, 10000)}, count=10000
+        {0: sample(train_data_list_0, 14000), 1: sample(train_data_list_1, 14000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -495,7 +492,7 @@ if __name__ == '__main__':
 
     train_loader = torch_data.DataLoader(
         train_dataloader,
-        batch_size=64, shuffle=True, num_workers=0
+        batch_size=128, shuffle=True, num_workers=0
     )
 
     val_loader = torch_data.DataLoader(
@@ -556,7 +553,7 @@ if __name__ == '__main__':
         else:
             reset_count+=1
 
-        if reset_count == patience:
+        """if reset_count == patience:
             reset_count = 0
             curr_epoch = best_model
             if lr/2 < 0.0001:
@@ -567,7 +564,7 @@ if __name__ == '__main__':
                 margin/=2
             model, optimizer = restart_training(best_model, lr, device)
             #criterion = ContrastiveLoss(margin=margin)
-
+        """
 
         print('{}\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t'.format(
             curr_epoch,
@@ -577,4 +574,3 @@ if __name__ == '__main__':
             val_accuracy
         ))
         curr_epoch+=1
-

@@ -359,6 +359,7 @@ if __name__ == '__main__':
             current_task = cat_tasks[current_ts:current_ts+durations[idx]]
             task["data"] = current_task
             current_ts+=durations[idx]
+
     """
         SELECT TOP K SIGNAL SOURCES
         FROM THE 5x11 ARRAY
@@ -378,7 +379,7 @@ if __name__ == '__main__':
                 t_slice[0] = oxy_mask
                 t_slice[1] = dxy_mask
     """
-    
+
 
     task_data = pad_tasks(task_data)
 
@@ -388,37 +389,34 @@ if __name__ == '__main__':
         BINNING TASKS INTO WORKLOAD BUCKETS
     """
     TIME_CROP_LENGTH = 300
-    train_labeled_task_bin = {0:[], 1:[], 2:[]}
+    train_labeled_task_bin = {0:[], 2:[]}
 
     for participant_id in train_ids:
         for t in participant_taskdata[participant_id]:
 
             wm_label = t["wl_label"][0]
-            """
-            if wm_label in [1, 2]:
-                for i in range(0, 60, 20):
-                    train_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
-            else:
-            """
-            train_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
+
+            if wm_label in [0, 2]:
+                train_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
 
 
-    val_labeled_task_bin = {0:[], 1:[], 2:[]}
+    val_labeled_task_bin = {0:[], 2:[]}
     for participant_id in val_ids:
         for t in participant_taskdata[participant_id]:
             wm_label = t["wl_label"][0]
-            """
-            if wm_label in [1, 2]:
-                for i in range(0, 60, 20):
-                    val_labeled_task_bin[wm_label].append(t["data"][i:i+TIME_CROP_LENGTH])
-            else:
-            """
-            val_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
 
-    train_pairs = {0:[], 1:[]}
+            if wm_label in [0, 2]:
+                val_labeled_task_bin[wm_label].append(t["data"][:TIME_CROP_LENGTH])
+
+    print("Samples in train wm_label bins:")
     for i in train_labeled_task_bin:
         print(len(train_labeled_task_bin[i]))
 
+    print("Samples in validation wm_label bins:")
+    for i in val_labeled_task_bin:
+        print(len(val_labeled_task_bin[i]))
+
+    train_pairs = {0:[], 1:[]}
     # matching pairs
     for i in train_labeled_task_bin:
 
@@ -430,6 +428,7 @@ if __name__ == '__main__':
         while True:
             if not np.any(lab_tasks_idx == lab_tasks_perm):
                 break
+
 
         for a in lab_tasks_idx:
             for b in lab_tasks_perm:
@@ -444,7 +443,7 @@ if __name__ == '__main__':
 
     # different pairs
     labels = train_labeled_task_bin.keys()
-    label_pairs = [(0, 1), (1, 2), (2, 0)]
+    label_pairs = [(2, 0)]
 
     for lab1, lab2 in label_pairs:
         for task1 in train_labeled_task_bin[lab1]:
@@ -464,8 +463,8 @@ if __name__ == '__main__':
         WRITE TRAIN DATA TO DISK
     """
 
-    NUM_TRAIN_SAMPLES = 60000
-    NUM_TEST_SAMPLES = 30000
+    NUM_TRAIN_SAMPLES = 20000
+    NUM_TEST_SAMPLES = 30
     # save matching
     for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
         print("Saved matching pairs {} of {} to disk.".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
@@ -481,18 +480,16 @@ if __name__ == '__main__':
     """
     for i in val_labeled_task_bin:
         print(len(val_labeled_task_bin[i]))
-    val_label_examples = {0:[1, 2], 1:[0, 2], 2:[1, 0]}
+    val_label_examples = {0:[2], 2:[0]}
     val_pairs = []
     for i in val_labeled_task_bin:
         for task in val_labeled_task_bin[i]:
 
             t2 = val_label_examples[i][0]
-            t3 = val_label_examples[i][1]
             val_pairs.append({
                 "t1": [task, i],
                 "t2": [random.choice(val_labeled_task_bin[t2]), t2],
-                "t3": [random.choice(val_labeled_task_bin[t3]), t3],
-                "t4": [random.choice(val_labeled_task_bin[i]), i]
+                "t3": [random.choice(val_labeled_task_bin[i]), i],
             })
     print("Saved validation data to disk.")
     np.save("../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val", val_pairs)
