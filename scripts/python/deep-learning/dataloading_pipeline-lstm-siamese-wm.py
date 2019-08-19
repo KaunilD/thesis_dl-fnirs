@@ -6,7 +6,7 @@ import numpy as np
 import glob
 import os
 import random
-from random import shuffle
+from random import shuffle, choice ,sample
 
 from sklearn.preprocessing import normalize
 
@@ -326,8 +326,8 @@ if __name__ == '__main__':
     """
         SPLIT PARTICIPANTS INTO TRAIN AND TEST
     """
-    train_ids = participant_ids[:int(.8*len(participant_ids))]
-    val_ids = participant_ids[int(0.8*len(participant_ids)):]
+    train_ids = sample(participant_ids, 11)
+    val_ids = [i for i in participant_ids if i not in train_ids] 
     print(
         "Train Participants: {}, Test Participants: {}".format(len(train_ids), len(val_ids))
     )

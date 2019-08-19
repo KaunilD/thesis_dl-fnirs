@@ -11,6 +11,7 @@ import torch.utils.data as torch_data
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
+import time
 
 from random import shuffle, sample
 
@@ -426,17 +427,13 @@ class ConvLSTMNet(nn.Module):
         return out1, out2
 
 def load_model(best_model, learning_rate, device):
-    checkpoint = torch.load(
-        '{}-{}.{}'.format(
-            MODEL_PATH_PREFIX,str(best_model), MODEL_PATH_EXT
-        )
-    )
+    checkpoint = torch.load(best_model)
 
     model = ConvLSTMNet()
     model.load_state_dict(checkpoint['model'])
     model.to(device)
 
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate, momentum=0.9)
     optimizer.load_state_dict(checkpoint['optimizer'])
 
     for state in optimizer.state.values():
@@ -462,11 +459,11 @@ if __name__ == '__main__':
     epochs = 100
     curr_epoch = 0
     patience = 3
-    lr = 0.001
-    margin = 0.5
+    lr = 0.0001
+    margin = 1.0
 
     criterion = ContrastiveLoss(margin=margin)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=lr, momentum=0.9)
 
     model.to(device)
     criterion.to(device)
@@ -480,7 +477,7 @@ if __name__ == '__main__':
     val_data_list = np.load('../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy')
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 14000), 1: sample(train_data_list_1, 14000)}, count=10000
+        {0: sample(train_data_list_0, 8000), 1: sample(train_data_list_1, 8000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -488,7 +485,6 @@ if __name__ == '__main__':
         val_data_list
     )
     print("Validation dataset loaded.")
-
 
     train_loader = torch_data.DataLoader(
         train_dataloader,
@@ -540,22 +536,26 @@ if __name__ == '__main__':
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict()
         }
+        current_time = time.time()
+
+        model_save_str = '{}-{}-ts-{}.{}'.format(
+            MODEL_PATH_PREFIX, curr_epoch, current_time, MODEL_PATH_EXT
+        )
 
         torch.save(
             state,
-            '{}-{}.{}'.format(MODEL_PATH_PREFIX, curr_epoch, MODEL_PATH_EXT)
+            model_save_str
         )
-
+        """
         if val_accuracy > best_accuracy:
             best_accuracy = val_accuracy
-            best_model = curr_epoch
+            best_model = model_save_str
             reset_count = 0
         else:
             reset_count+=1
-
-        """if reset_count == patience:
+        """
+        if reset_count == patience:
             reset_count = 0
-            curr_epoch = best_model
             if lr/2 < 0.0001:
                 lr = 0.0005
                 margin = 2.0
@@ -564,7 +564,6 @@ if __name__ == '__main__':
                 margin/=2
             model, optimizer = restart_training(best_model, lr, device)
             #criterion = ContrastiveLoss(margin=margin)
-        """
 
         print('{}\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t{:.5f}\t\t'.format(
             curr_epoch,
@@ -574,3 +573,4 @@ if __name__ == '__main__':
             val_accuracy
         ))
         curr_epoch+=1
+
