@@ -313,7 +313,7 @@ def validate(model, dataset_loader, device):
 
 if __name__=="__main__":
     print("loading model")
-    model_path = './model-siamese-epoch-8-ts-1566337785.7150645.pth'
+    model_path = './model-siamese-epoch-5-ts-1566363011.0850825.pth'
     model = ConvLSTMNet()
     model.load_state_dict(torch.load(model_path)["model"])
     print("model loaded")
