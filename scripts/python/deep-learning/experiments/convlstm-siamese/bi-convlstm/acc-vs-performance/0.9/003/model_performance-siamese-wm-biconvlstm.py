@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix
 
 
+
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
         self.data_list = data_list
@@ -30,8 +31,9 @@ class LSTMValDataLoader(torch_data.Dataset):
             im1 = datum["t1"][0]
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
+            #print(datum["t1"][1], datum["t2"][1], datum["t3"][1])
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1, im2, im3))
+            self.image_list.append((im1, im2, im3, datum["t3"][1]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -282,6 +284,7 @@ def validate(model, dataset_loader, device):
     total = 0
     valid_loss = 0
 
+    preds, gt = [], []
     with torch.no_grad():
         for i, data in enumerate(dataset_loader):
             print('Validation: [Batch: {} ({:.0f}%)]'
@@ -303,17 +306,33 @@ def validate(model, dataset_loader, device):
 
             #print(output1, output2, output3)
             pred = int(output2 <= output1)
+            if pred:
+                preds.append(data[3].cpu().numpy()[0])
+            else:
+                preds.append(0)
 
+            gt.append(data[3].cpu().numpy()[0])
             total += 1
             correct += int(pred)
 
+    print()
     accuracy = 100 * correct / total
-    return accuracy
+
+    return accuracy, [preds, gt]
 
 
 if __name__=="__main__":
+
+    print("loading data")
+    data_list = np.load('./data_siamese_val.npy')
+    val_dataset = LSTMValDataLoader(data_list)
+    val_dataloader = torch_data.DataLoader(
+        val_dataset, batch_size=1
+    )
+
+
     print("loading model")
-    model_path = './model-siamese-epoch-5-ts-1566363011.0850825.pth'
+    model_path = './model-siamese-epoch-7-ts-1566354225.4146552.pth'
     model = ConvLSTMNet()
     model.load_state_dict(torch.load(model_path)["model"])
     print("model loaded")
@@ -322,11 +341,9 @@ if __name__=="__main__":
     model.eval()
     model.to(device)
 
-    print("loading data")
-    data_list = np.load('./data_siamese_val.npy')
-    val_dataset = LSTMValDataLoader(data_list)
-    val_dataloader = torch_data.DataLoader(
-        val_dataset, batch_size=1
-    )
-    score = validate(model, val_dataloader, device)
+    score, cnf = validate(model, val_dataloader, device)
+    cnf = confusion_matrix(cnf[1], cnf[0])
+    cnf = cnf.astype('float') / cnf.sum(axis=1)[:, np.newaxis]
+
     print(score)
+    print(cnf)
