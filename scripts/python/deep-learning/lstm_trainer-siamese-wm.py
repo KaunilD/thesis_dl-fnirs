@@ -34,7 +34,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[0:60], im2[0:60], im3[0:60]))
+            self.image_list.append((im1, im2, im3))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -70,7 +70,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[0:60], im2[0:60]))
+            self.image_list.append((im1, im2))
             self.label_list.append(label)
 
             del im1
@@ -347,7 +347,7 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=2, kernel_size=(1, 2, 2))
+        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=2, kernel_size=(50, 2, 1))
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.MaxPool3d((5, 1, 1))
 
@@ -378,22 +378,17 @@ class ConvLSTMNet(nn.Module):
         out = x
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
-        out = self.conv3d1(out)
-        out = self.pool1(out)
+        #out = self.conv3d1(out)
+        #out = self.pool1(out)
 
         # N, D, C, H, W = 1, 1, 160, 5, 22
         out = out.permute(0, 2, 1, 3, 4)
         """
-
         #out = self.bn1(out)
-
-
         out = self.conv3d2(out)
         #out = self.pool2(out)
         #out = self.bn2(out)
-
         out = self.nl1(out)
-
         #print(out.size())
         """
         for t in range(0, out.size(1)):
@@ -573,4 +568,3 @@ if __name__ == '__main__':
             val_accuracy
         ))
         curr_epoch+=1
-
