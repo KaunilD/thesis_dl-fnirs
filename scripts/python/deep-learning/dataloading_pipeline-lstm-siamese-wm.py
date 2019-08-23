@@ -249,6 +249,31 @@ if __name__ == '__main__':
     conditions = sorted(glob.glob('../../../data/multilabel/mats/mindfulness/*.csv'))
     data = sorted(glob.glob('../../../data/multilabel/mats/mindfulness/*.mat'))
 
+    invalids = [
+        '8210_s2','2003_s1','8208_s2','8203_s1','8204_s1','8212_s1','2014_s2',
+        '2006_s2','8208_s2','8206_s2','8203_s1','8213_s1','8204_s1','2004_s1',
+        '8201_s1','8215_s1','8219_s1','8211_s1','2001_s1','2006_s1','2006_s1',
+        '2006_s2','8210_s1','8210_s2','8210_s2','8218_s1','2017_s1','2019_s1',
+        '2003_s1','8209_s1','8208_s1','8208_s1','8208_s2','2012_s1','8220_s1',
+        '2007_s1','8205_s2','2011_s1','2011_s2','2015_s2','8204_s2','2013_s1',
+        '2013_s1','2013_s2','8212_s2','2002_s2','2004_s1','2004_s1','2014_s1',
+        '2014_s1','2014_s2','8215_s1','2001_s1','2006_s1','2006_s2','8210_s2',
+        '2017_s1','2019_s1','8209_s2','8208_s2','8208_s2','2012_s1','2012_s2',
+        '8216_s2','8216_s2','8206_s2','8206_s2','8220_s1','8220_s1','2007_s1',
+        '2007_s1','8203_s1','8203_s1','2011_s1','8213_s1','8213_s1','2015_s1',
+        '2015_s1','2015_s2','8204_s1','8204_s2','2013_s1','2013_s2','8212_s1',
+        '2002_s1','2002_s2','2004_s1','2004_s1','2014_s1','8201_s1','8201_s1',
+        '8219_s1','8219_s1','8211_s1','8211_s2','2001_s1','2001_s1','8221_s2',
+        '2006_s1','8210_s1','8210_s1','8210_s2','8218_s1','2017_s1','2019_s1',
+        '2019_s1','2003_s1','8209_s1','8209_s1','8209_s2','8208_s1','8208_s1',
+        '8208_s2','8208_s2','2012_s1','2012_s1','2012_s2','2012_s2','8216_s1',
+        '8216_s1','8216_s2','8216_s2','8206_s1','8220_s1','2007_s1','2007_s1',
+        '8205_s2','2015_s1','2013_s2','8219_s1','2006_s2','8210_s2'
+    ]
+
+    print("Invalid participant sessions: ", invalids)
+
+
     task_data = []
     time_series_length = 10
 
@@ -259,6 +284,8 @@ if __name__ == '__main__':
         session_id = os.path.basename(cond) # etc.csv
         session_id = session_id.split(".")[0] # etc
         session_id = session_id[-2:]
+        if participant_id+'_'+session_id in invalids:
+            continue
 
         tasks = read_tasks(cond, dat)
         for t in tasks:
@@ -289,36 +316,10 @@ if __name__ == '__main__':
     """
     participant_taskdata = {}
 
-    invalids = [
-        '8210_s2','2003_s1','8208_s2','8203_s1','8204_s1','8212_s1','2014_s2',
-        '2006_s2','8208_s2','8206_s2','8203_s1','8213_s1','8204_s1','2004_s1',
-        '8201_s1','8215_s1','8219_s1','8211_s1','2001_s1','2006_s1','2006_s1',
-        '2006_s2','8210_s1','8210_s2','8210_s2','8218_s1','2017_s1','2019_s1',
-        '2003_s1','8209_s1','8208_s1','8208_s1','8208_s2','2012_s1','8220_s1',
-        '2007_s1','8205_s2','2011_s1','2011_s2','2015_s2','8204_s2','2013_s1',
-        '2013_s1','2013_s2','8212_s2','2002_s2','2004_s1','2004_s1','2014_s1',
-        '2014_s1','2014_s2','8215_s1','2001_s1','2006_s1','2006_s2','8210_s2',
-        '2017_s1','2019_s1','8209_s2','8208_s2','8208_s2','2012_s1','2012_s2',
-        '8216_s2','8216_s2','8206_s2','8206_s2','8220_s1','8220_s1','2007_s1',
-        '2007_s1','8203_s1','8203_s1','2011_s1','8213_s1','8213_s1','2015_s1',
-        '2015_s1','2015_s2','8204_s1','8204_s2','2013_s1','2013_s2','8212_s1',
-        '2002_s1','2002_s2','2004_s1','2004_s1','2014_s1','8201_s1','8201_s1',
-        '8219_s1','8219_s1','8211_s1','8211_s2','2001_s1','2001_s1','8221_s2',
-        '2006_s1','8210_s1','8210_s1','8210_s2','8218_s1','2017_s1','2019_s1',
-        '2019_s1','2003_s1','8209_s1','8209_s1','8209_s2','8208_s1','8208_s1',
-        '8208_s2','8208_s2','2012_s1','2012_s1','2012_s2','2012_s2','8216_s1',
-        '8216_s1','8216_s2','8216_s2','8206_s1','8220_s1','2007_s1','2007_s1',
-        '8205_s2','2015_s1','2013_s2','8219_s1','2006_s2','8210_s2'
-    ]
-
-
     for t in task_data:
-        if t["participant_id"]+'_'+t["session_id"] not in invalids:
-            if t["participant_id"] not in participant_taskdata:
-                participant_taskdata[t["participant_id"]] = []
-            participant_taskdata[t["participant_id"]].append(t)
-
-
+        if t["participant_id"] not in participant_taskdata:
+            participant_taskdata[t["participant_id"]] = []
+        participant_taskdata[t["participant_id"]].append(t)
 
     participant_ids = list(participant_taskdata.keys())
     print("Valid Participants: ", participant_ids)
@@ -327,7 +328,7 @@ if __name__ == '__main__':
         SPLIT PARTICIPANTS INTO TRAIN AND TEST
     """
     train_ids = sample(participant_ids, 11)
-    val_ids = [i for i in participant_ids if i not in train_ids] 
+    val_ids = [i for i in participant_ids if i not in train_ids]
     print(
         "Train Participants: {}, Test Participants: {}".format(len(train_ids), len(val_ids))
     )
@@ -416,7 +417,7 @@ if __name__ == '__main__':
     for i in val_labeled_task_bin:
         print(len(val_labeled_task_bin[i]))
 
-    train_pairs = {0:[], 1:[]}
+    train_pairs_bin_same, train_pairs_bin_diff = {}, {}
     # matching pairs
     for i in train_labeled_task_bin:
 
@@ -433,13 +434,17 @@ if __name__ == '__main__':
         for a in lab_tasks_idx:
             for b in lab_tasks_perm:
                 if a == b : continue
-                train_pairs[0].append(
+                if str([i, i]) not in train_pairs_bin_same:
+                    train_pairs_bin_same[str([i, i])]=[]
+                train_pairs_bin_same[str([i, i])].append(
                     (
                         [train_labeled_task_bin[i][a], i], # i is the wm-GT label
                         [train_labeled_task_bin[i][b], i],
                         0
                     )
                 )
+
+
 
     # different pairs
     labels = train_labeled_task_bin.keys()
@@ -448,38 +453,56 @@ if __name__ == '__main__':
     for lab1, lab2 in label_pairs:
         for task1 in train_labeled_task_bin[lab1]:
             for task2 in train_labeled_task_bin[lab2]:
-                train_pairs[1].append((
+                if str([lab1, lab2]) not in train_pairs_bin_diff:
+                    train_pairs_bin_diff[str([lab1, lab2])]=[]
+                train_pairs_bin_diff[str([lab1, lab2])].append((
                     [task1, lab1], # lab1, lab2 are the wm-gt labels
                     [task2, lab2],
                     1
                 ))
 
-    print(len(train_pairs[0]), len(train_pairs[1]))
 
-    shuffle(train_pairs[0])
-    shuffle(train_pairs[1])
+    for key in train_pairs_bin_diff.keys():
+        print("Different:")
+        print(key, len(train_pairs_bin_diff[key]))
+        shuffle(train_pairs_bin_diff[key])
+
+    NUM_TRAIN_SAMPLES = 99999999
+
+    for key in train_pairs_bin_same.keys():
+        print("Same:")
+        print(key, len(train_pairs_bin_same[key]))
+        shuffle(train_pairs_bin_same[key])
+        if NUM_TRAIN_SAMPLES > len(train_pairs_bin_same[key]):
+            NUM_TRAIN_SAMPLES = len(train_pairs_bin_same[key])
 
     """
         WRITE TRAIN DATA TO DISK
     """
-
-    NUM_TRAIN_SAMPLES = 20000
+    TRAIN_COUNT = 0
     NUM_TEST_SAMPLES = 30
     # save matching
-    for idx, data in enumerate(train_pairs[0][0:NUM_TRAIN_SAMPLES]):
-        print("Saved matching pairs {} of {} to disk.".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
-        np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/0/" + str(idx), data)
-    print()
+    for key in train_pairs_bin_same:
+        for idx, data in enumerate(train_pairs_bin_same[key][0:NUM_TRAIN_SAMPLES]):
+            print("Saved matching pairs {}: {} of {} to disk.".format(key, idx+1, NUM_TRAIN_SAMPLES), end='\r')
+            np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/0/" + str(TRAIN_COUNT), data)
+            TRAIN_COUNT+=1
+        print()
+
     # save different
-    for idx, data in enumerate(train_pairs[1][0:NUM_TRAIN_SAMPLES]):
-        print("Saved different pairs {} of {} to disk".format(idx+1, NUM_TRAIN_SAMPLES), end='\r')
-        np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/1/" + str(idx), data)
-    print()
+    for key in train_pairs_bin_diff:
+        for idx, data in enumerate(train_pairs_bin_diff[key][0:2*NUM_TRAIN_SAMPLES]):
+            print("Saved different pairs {}: {} of {} to disk".format(key, idx+1, 2*NUM_TRAIN_SAMPLES), end='\r')
+            np.save("../../../data/multilabel/all/mindfulness/siamese/wm/train/1/" + str(TRAIN_COUNT), data)
+            TRAIN_COUNT+=1
+        print()
+
     """
         WRITE VALIDATION DATA TO DISK
     """
     for i in val_labeled_task_bin:
         print(len(val_labeled_task_bin[i]))
+
     val_label_examples = {0:[2], 2:[0]}
     val_pairs = []
     for i in val_labeled_task_bin:
@@ -525,7 +548,7 @@ if __name__ == '__main__':
 
     # different pairs
     labels = val_labeled_task_bin.keys()
-    label_pairs = [(0, 1)]
+    label_pairs = [(0, 2)]
 
     for lab1, lab2 in label_pairs:
         for task1 in val_labeled_task_bin[lab1]:

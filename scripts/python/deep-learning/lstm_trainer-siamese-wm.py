@@ -347,20 +347,14 @@ class ConvLSTMNet(nn.Module):
     def __init__( self, num_classes = 2):
         super(ConvLSTMNet, self).__init__()
 
-        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=2, kernel_size=(50, 2, 1))
+        self.conv3d1 = nn.Conv3d(in_channels=2, out_channels=2, kernel_size=(30, 2, 1))
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.MaxPool3d((5, 1, 1))
 
-        self.conv3d2 = nn.Conv3d(in_channels=15, out_channels=30, kernel_size=(1, 1, 1))
-        self.bn2 = nn.BatchNorm3d(30)
-        self.pool2 = nn.MaxPool3d((2, 1, 1))
+        self.convLSTM2d1 = ConvLSTM2D((4, 11), 2, 64, 1)
+        self.convLSTM2d2 = ConvLSTM2D((4, 11), 2, 64, 1)
 
-        self.nl1 = nn.Tanh()
-
-        self.convLSTM2d1 = ConvLSTM2D((4, 10), 2, 64, 1)
-        self.convLSTM2d2 = ConvLSTM2D((4, 10), 2, 64, 1)
-
-        self.fc2 = nn.Linear(5120, 3400)
+        self.fc2 = nn.Linear(5632, 3400)
         self.fc3 = nn.Linear(3400, 1000)
         self.fc4 = nn.Linear(1000, 500)
         self.fc5 = nn.Linear(500, 50)
@@ -375,22 +369,13 @@ class ConvLSTMNet(nn.Module):
         else:
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
             self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
-        out = x
         # N, C, D, H, W = 1, 1, 160, 5, 22
         out = x.permute(0, 2, 1, 3, 4)
-        #out = self.conv3d1(out)
-        #out = self.pool1(out)
+        out = self.conv3d1(out)
 
         # N, D, C, H, W = 1, 1, 160, 5, 22
         out = out.permute(0, 2, 1, 3, 4)
-        """
-        #out = self.bn1(out)
-        out = self.conv3d2(out)
-        #out = self.pool2(out)
-        #out = self.bn2(out)
-        out = self.nl1(out)
-        #print(out.size())
-        """
+
         for t in range(0, out.size(1)):
 
             self.h1, self.c1 = self.convLSTM2d1(
@@ -400,11 +385,7 @@ class ConvLSTMNet(nn.Module):
             self.h2, self.c2 = self.convLSTM2d2(
                 out[:, out.size(1)-t-1, :, :, :], (self.h2, self.c2)
             )
-            """
-            self.h3, self.c3 = self.convLSTM2d3(
-                self.h2, (self.h3, self.c3)
-            )
-            """
+
         out = torch.cat((self.h1, self.h2), 1)
         out = out.view(out.size(0), -1)
 
@@ -472,7 +453,7 @@ if __name__ == '__main__':
     val_data_list = np.load('../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy')
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 8000), 1: sample(train_data_list_1, 8000)}, count=10000
+        {0: sample(train_data_list_0, 4100), 1: sample(train_data_list_1, 4100)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -483,7 +464,7 @@ if __name__ == '__main__':
 
     train_loader = torch_data.DataLoader(
         train_dataloader,
-        batch_size=128, shuffle=True, num_workers=0
+        batch_size=32, shuffle=True, num_workers=0
     )
 
     val_loader = torch_data.DataLoader(
