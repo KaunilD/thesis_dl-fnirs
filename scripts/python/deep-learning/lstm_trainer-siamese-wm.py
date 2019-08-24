@@ -351,10 +351,10 @@ class ConvLSTMNet(nn.Module):
         self.bn1 = nn.BatchNorm3d(15)
         self.pool1 = nn.MaxPool3d((5, 1, 1))
 
-        self.convLSTM2d1 = ConvLSTM2D((4, 11), 2, 64, 1)
-        self.convLSTM2d2 = ConvLSTM2D((4, 11), 2, 64, 1)
+        self.convLSTM2d1 = ConvLSTM2D((5, 11), 2, 64, 1)
+        self.convLSTM2d2 = ConvLSTM2D((5, 11), 2, 64, 1)
 
-        self.fc2 = nn.Linear(5632, 3400)
+        self.fc2 = nn.Linear(7040, 3400)
         self.fc3 = nn.Linear(3400, 1000)
         self.fc4 = nn.Linear(1000, 500)
         self.fc5 = nn.Linear(500, 50)
@@ -369,12 +369,7 @@ class ConvLSTMNet(nn.Module):
         else:
             self.h1, self.c1 = self.convLSTM2d1.init_hidden(batch_size=b_idx)
             self.h2, self.c2 = self.convLSTM2d2.init_hidden(batch_size=b_idx)
-        # N, C, D, H, W = 1, 1, 160, 5, 22
-        out = x.permute(0, 2, 1, 3, 4)
-        out = self.conv3d1(out)
-
-        # N, D, C, H, W = 1, 1, 160, 5, 22
-        out = out.permute(0, 2, 1, 3, 4)
+        out = x
 
         for t in range(0, out.size(1)):
 
