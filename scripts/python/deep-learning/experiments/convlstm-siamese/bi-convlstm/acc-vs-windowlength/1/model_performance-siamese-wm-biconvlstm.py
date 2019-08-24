@@ -33,7 +33,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im3 = datum["t3"][0]
             #print(datum["t1"][1], datum["t2"][1], datum["t3"][1])
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1, im2, im3, datum["t3"][1]))
+            self.image_list.append((im1[:250], im2[:250], im3[:250], datum["t3"][1]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -353,7 +353,7 @@ if __name__=="__main__":
 
     device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
 
-    models = glob.glob("*.pth")
+    models = glob.glob("./250/*.pth")
 
     for idx, i in enumerate(models):
         print("loading model")

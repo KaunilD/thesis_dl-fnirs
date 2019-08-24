@@ -10,7 +10,7 @@ Each of these values are the result of 10 fold cross validation with 29 particip
 
 | Convolution Window Length | Binary CM                                                    | Binary % | Ternary CM | Ternary % | Model Path (BINARY)                                     | Model Path (TERNARY) |
 | ------------------------- | ------------------------------------------------------------ | -------- | ---------- | --------- | ------------------------------------------------------- | -------------------- |
-| 300                       | ![](./1/300/cnfmodel-siamese-epoch-4-ts-1566664607.9168901.pth.png) | 66.66%   |            |           | ./1/300/model-siamese-epoch-4-ts-1566664607.9168901.pth |                      |
-| 250                       |                                                              |          |            |           |                                                         |                      |
-| 10                        |                                                              |          |            |           |                                                         |                      |
+| 300                       | ![](./1/300/cnfmodel-siamese-epoch-4-ts-1566664607.9168901.pth.png) | 66.66    |            |           | ./1/300/model-siamese-epoch-4-ts-1566664607.9168901.pth |                      |
+| 250                       | ![](./1/250/cnfmodel-siamese-epoch-7-ts-1566680749.9065804.pth.png) | 63.88    |            |           | ./1/250/model-siamese-epoch-7-ts-1566680749.9065804.pth |                      |
+| 200                       |                                                              |          |            |           |                                                         |                      |
 
