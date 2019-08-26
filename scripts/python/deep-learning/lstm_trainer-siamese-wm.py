@@ -497,7 +497,7 @@ if __name__ == '__main__':
 
         val_accuracy = validate(
             model, val_loader,
-            device, criterion
+            device
         )
 
         train_loss_history.append(
