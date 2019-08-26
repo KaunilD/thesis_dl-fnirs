@@ -15,7 +15,8 @@ import time
 
 from random import shuffle, sample
 
-MODEL_PATH_PREFIX = '/projects/kadh5719/thesis_dl-fnirs/scripts/python/deep-learning/experiments/convlstm-siamese/temp/100/model-siamese-epoch'
+WINDOW_LENGTH = 500
+MODEL_PATH_PREFIX = '/projects/kadh5719/thesis_dl-fnirs/scripts/python/deep-learning/experiments/convlstm-siamese/temp/{}/siamese-e'.format(WINDOW_LENGTH)
 MODEL_PATH_EXT = 'pth'
 
 
@@ -33,8 +34,12 @@ class LSTMValDataLoader(torch_data.Dataset):
             im1 = datum["t1"][0]
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
+            #print(datum["t1"][1], datum["t2"][1], datum["t3"][1])
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[:100], im2[:100], im3[:100]))
+            self.image_list.append((
+                im1[:WINDOW_LENGTH], im2[:WINDOW_LENGTH], im3[:WINDOW_LENGTH],
+                datum["t1"][1], datum["t2"][1], datum["t3"][1]
+            ))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -42,7 +47,6 @@ class LSTMValDataLoader(torch_data.Dataset):
 
     def __len__(self):
         return len(self.image_list)
-
 
 # In[47]:
 
@@ -70,7 +74,7 @@ class LSTMTrainDataLoader(torch_data.Dataset):
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1[:100], im2[:100]))
+            self.image_list.append((im1[:WINDOW_LENGTH], im2[:WINDOW_LENGTH]))
             self.label_list.append(label)
 
             del im1
@@ -291,12 +295,13 @@ def test(model, dataset_loader, device, criterion):
     return running_loss/total, 100*correct/total
 
 
-def validate(model, dataset_loader, device, criterion):
+def validate(model, dataset_loader, device):
     model.eval()
     correct = 0
     total = 0
     valid_loss = 0
 
+    preds, gt = [], []
     with torch.no_grad():
         for i, data in enumerate(dataset_loader):
             print('Validation: [Batch: {} ({:.0f}%)]'
@@ -308,22 +313,30 @@ def validate(model, dataset_loader, device, criterion):
 
             input1, input2, input3 = data[0].float(), data[1].float(), data[2].float()
             input1, input2, input3 = input1.to(device), input2.to(device), input3.to(device)
-            # different
-            output1 = model(input1, input2)
             # matching
-            output2 = model(input1, input3)
+            output1 = model(input1, input3)
+            # different
+            output2 = model(input2, input3)
 
             output1 = F.pairwise_distance(output1[0], output1[1])
             output2 = F.pairwise_distance(output2[0], output2[1])
 
             #print(output1, output2, output3)
-            pred = int(output2 <= output1)
+            pred = int(output1 <= output2)
+            if pred:
+                preds.append(data[3].numpy()[0])
+            else:
+                preds.append(data[4].numpy()[0])
 
+            gt.append(data[5].numpy()[0])
             total += 1
             correct += int(pred)
 
+    print()
     accuracy = 100 * correct / total
-    return accuracy
+
+    return accuracy, [preds, gt]
+
 
 class ContrastiveLoss(torch.nn.Module):
     """

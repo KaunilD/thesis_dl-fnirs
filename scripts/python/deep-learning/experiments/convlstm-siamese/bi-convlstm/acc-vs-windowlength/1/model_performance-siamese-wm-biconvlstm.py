@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
+WINDOW_LENGTH = 250
 
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
@@ -33,7 +34,10 @@ class LSTMValDataLoader(torch_data.Dataset):
             im3 = datum["t3"][0]
             #print(datum["t1"][1], datum["t2"][1], datum["t3"][1])
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1[:250], im2[:250], im3[:250], datum["t3"][1]))
+            self.image_list.append((
+                im1[:WINDOW_LENGTH], im2[:WINDOW_LENGTH], im3[:WINDOW_LENGTH],
+                datum["t1"][1], datum["t2"][1], datum["t3"][1]
+            ))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -267,22 +271,22 @@ def validate(model, dataset_loader, device):
 
             input1, input2, input3 = data[0].float(), data[1].float(), data[2].float()
             input1, input2, input3 = input1.to(device), input2.to(device), input3.to(device)
-            # different
-            output1 = model(input1, input2)
             # matching
-            output2 = model(input1, input3)
+            output1 = model(input1, input3)
+            # different
+            output2 = model(input2, input3)
 
             output1 = F.pairwise_distance(output1[0], output1[1])
             output2 = F.pairwise_distance(output2[0], output2[1])
 
             #print(output1, output2, output3)
-            pred = int(output2 <= output1)
+            pred = int(output1 <= output2)
             if pred:
                 preds.append(data[3].numpy()[0])
             else:
-                preds.append(0)
+                preds.append(data[4].numpy()[0])
 
-            gt.append(data[3].numpy()[0])
+            gt.append(data[5].numpy()[0])
             total += 1
             correct += int(pred)
 
@@ -353,10 +357,10 @@ if __name__=="__main__":
 
     device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
 
-    models = glob.glob("./250/*.pth")
+    models = glob.glob("./{}/*.pth".format(WINDOW_LENGTH))
 
     for idx, i in enumerate(models):
-        print("loading model")
+        print("loading model: {}".format(i))
         model_path = i
         model = ConvLSTMNet()
         model.load_state_dict(torch.load(model_path)["model"])
