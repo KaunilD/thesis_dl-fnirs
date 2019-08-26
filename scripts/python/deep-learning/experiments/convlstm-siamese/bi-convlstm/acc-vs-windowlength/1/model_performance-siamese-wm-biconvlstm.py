@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
-WINDOW_LENGTH = 10
+WINDOW_LENGTH = 50
 
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
@@ -355,7 +355,7 @@ if __name__=="__main__":
         val_dataset, batch_size=1
     )
 
-    device = torch.device("cpu" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
 
     models = glob.glob("./{}/*.pth".format(WINDOW_LENGTH))
 
