@@ -15,7 +15,7 @@ import time
 
 from random import shuffle, sample
 
-MODEL_PATH_PREFIX = './experiments/convlstm-siamese/temp/model-siamese-epoch'
+MODEL_PATH_PREFIX = '/projects/kadh5719/thesis_dl-fnirs/scripts/python/deep-learning/experiments/convlstm-siamese/temp/100/model-siamese-epoch'
 MODEL_PATH_EXT = 'pth'
 
 
@@ -34,7 +34,7 @@ class LSTMValDataLoader(torch_data.Dataset):
             im2 = datum["t2"][0]
             im3 = datum["t3"][0]
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
-            self.image_list.append((im1, im2, im3))
+            self.image_list.append((im1[:100], im2[:100], im3[:100]))
         print()
     def __getitem__(self, index):
         return self.image_list[index]
@@ -63,14 +63,14 @@ class LSTMTrainDataLoader(torch_data.Dataset):
 
         for idx, item in enumerate(self.data_list):
             print("Reading item # {}".format(idx), end="\r")
-            datum = np.load(item)
+            datum = np.load(item, allow_pickle=True)
             im1 = datum[0][0]
             im2 = datum[1][0]
 
             #image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2], image.shape[3] ))
             label = datum[2]
 
-            self.image_list.append((im1, im2))
+            self.image_list.append((im1[:100], im2[:100]))
             self.label_list.append(label)
 
             del im1
@@ -442,13 +442,13 @@ if __name__ == '__main__':
     train_loss_history, test_loss_history = [], []
     test_acc_history, val_acc_history = [], []
 
-    train_data_list_0 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/0/*.npy')
-    train_data_list_1 = glob.glob('../../../data/multilabel/all/mindfulness/siamese/wm/train/1/*.npy')
+    train_data_list_0 = glob.glob('/projects/kadh5719/thesis_dl-fnirs/data/multilabel/all/mindfulness/siamese/wm/train/0/*.npy')
+    train_data_list_1 = glob.glob('/projects/kadh5719/thesis_dl-fnirs/data/multilabel/all/mindfulness/siamese/wm/train/1/*.npy')
 
-    val_data_list = np.load('../../../data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy')
+    val_data_list = np.load('/projects/kadh5719/thesis_dl-fnirs/data/multilabel/all/mindfulness/siamese/wm/validation/data_siamese_val.npy', allow_pickle=True)
 
     train_dataloader = LSTMTrainDataLoader(
-        {0: sample(train_data_list_0, 4100), 1: sample(train_data_list_1, 4100)}, count=10000
+        {0: sample(train_data_list_0, 6000), 1: sample(train_data_list_1, 6000)}, count=10000
     )
     print("Train dataset loaded.")
 
@@ -509,8 +509,8 @@ if __name__ == '__main__':
         }
         current_time = time.time()
 
-        model_save_str = '{}-{}-ts-{}.{}'.format(
-            MODEL_PATH_PREFIX, curr_epoch, current_time, MODEL_PATH_EXT
+        model_save_str = '{}-{}-ts-{}-a-{}-l-{}.{}'.format(
+            MODEL_PATH_PREFIX, curr_epoch, current_time,val_accuracy, train_running_loss, MODEL_PATH_EXT
         )
 
         torch.save(
