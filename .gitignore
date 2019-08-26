@@ -1,3 +1,4 @@
 data/multilabel/*
 data/binary/*
 *.pth
+scripts/python/deep-learning/experiments/convlstm-siamese/bi-convlstm/acc-vs-performance/0.9
