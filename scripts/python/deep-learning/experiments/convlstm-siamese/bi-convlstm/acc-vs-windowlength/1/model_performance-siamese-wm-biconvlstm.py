@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
-WINDOW_LENGTH = 50
+WINDOW_LENGTH = 100
 
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
