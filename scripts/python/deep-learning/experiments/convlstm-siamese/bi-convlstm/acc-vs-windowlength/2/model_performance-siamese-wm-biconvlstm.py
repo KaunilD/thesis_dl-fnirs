@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 
-WINDOW_LENGTH = 400
+WINDOW_LENGTH = 10
 
 class LSTMValDataLoader(torch_data.Dataset):
     def __init__(self, data_list ):
@@ -297,28 +297,21 @@ def validate(model, dataset_loader, device):
 
 def plot_confusion_matrix(y_true, y_pred, classes,
                           normalize=False,
-                          title=None,
                           cmap=plt.cm.Blues):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
-    if not title:
-        if normalize:
-            title = 'Normalized confusion matrix'
-        else:
-            title = 'Confusion matrix, without normalization'
 
     # Compute confusion matrix
     cm = confusion_matrix(y_true, y_pred)
     # Only use the labels that appear in the data
-
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         print("Normalized confusion matrix")
-        print("Accuracy: ".format(np.mean(cm.diagonal())))
     else:
         print('Confusion matrix, without normalization')
+
 
     fig, ax = plt.subplots()
     im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
@@ -328,7 +321,7 @@ def plot_confusion_matrix(y_true, y_pred, classes,
            yticks=np.arange(cm.shape[0]),
            # ... and label them with the respective list entries
            xticklabels=[0, 1], yticklabels=classes,
-           title=title,
+           title='Accuracy: {}'.format(np.mean(cm.diagonal())),
            ylabel='True label',
            xlabel='Predicted label')
 
@@ -370,12 +363,10 @@ if __name__=="__main__":
         model.to(device)
 
         score, cnf = validate(model, val_dataloader, device)
-
         # Plot non-normalized confusion matrix
-        ax, cnf = plot_confusion_matrix(cnf[1], cnf[0],  classes=["0", "1"], normalize=True,
-                              title='Confusion matrix, normalized')
+        ax, cnf = plot_confusion_matrix(cnf[1], cnf[0],  classes=["0", "1"], normalize=True)
 
-        print(score)
+        print(np.mean(cnf.diagonal()))
         print(cnf)
 
         ax.savefig(str(i)+".png")
