@@ -26,6 +26,7 @@ default4: spatial/verbal
 # default3 = ["WM", "VisualPerceptual", "AuditoryPerceptual"]
 # every label in default 3 has discrete values of 'off', 'low', 'high'
 
+# nb, nback = visual nback and anb = audio nback.
 cog_load_label_dict = {
 # Mindfulness task labels.
                        "nb": {
